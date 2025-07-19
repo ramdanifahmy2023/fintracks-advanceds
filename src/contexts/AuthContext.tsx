@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, AuthContextType } from '@/types/auth';
@@ -25,7 +26,28 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [toastReady, setToastReady] = useState(false);
   const { toast } = useToast();
+
+  // Initialize toast system with delay to ensure it's ready
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setToastReady(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const safeToast = (options: any) => {
+    if (toastReady && toast) {
+      try {
+        toast(options);
+      } catch (error) {
+        console.warn('Toast failed, using console log instead:', options);
+      }
+    } else {
+      console.log('Toast message:', options.title, options.description);
+    }
+  };
 
   const fetchUserProfile = async (userId: string, retryCount = 0): Promise<User | null> => {
     try {
@@ -83,7 +105,7 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
               if (!userProfile.is_active) {
                 console.warn('⚠️ User account is inactive');
                 await supabase.auth.signOut();
-                toast({
+                safeToast({
                   title: "Akun Tidak Aktif",
                   description: "Akun Anda telah dinonaktifkan. Silakan hubungi administrator.",
                   variant: "destructive",
@@ -133,7 +155,7 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
       console.log('🧹 Cleaning up auth subscription');
       subscription.unsubscribe();
     };
-  }, []);
+  }, [toastReady]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -165,7 +187,7 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
           errorMessage = error.message;
         }
 
-        toast({
+        safeToast({
           title: "Login Error",
           description: errorMessage,
           variant: "destructive",
@@ -177,7 +199,7 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
       if (data.user) {
         console.log('✅ User authenticated successfully:', data.user.email);
         
-        toast({
+        safeToast({
           title: "Login Berhasil!",
           description: `Selamat datang, ${data.user.email}`,
         });
@@ -186,7 +208,7 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
       return {};
     } catch (error) {
       console.error('💥 Unexpected login error:', error);
-      toast({
+      safeToast({
         title: "Login Error",
         description: "Terjadi kesalahan tak terduga. Silakan coba lagi.",
         variant: "destructive",
@@ -203,13 +225,13 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
       await supabase.auth.signOut();
       setUser(null);
       setUserRole(null);
-      toast({
+      safeToast({
         title: "Logged out",
         description: "Anda telah berhasil logout.",
       });
     } catch (error) {
       console.error('❌ Logout error:', error);
-      toast({
+      safeToast({
         title: "Logout Error",
         description: "Terjadi kesalahan saat logout.",
         variant: "destructive",
@@ -229,13 +251,13 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
       if (error) throw error;
 
       setUser({ ...user, ...updates });
-      toast({
+      safeToast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated.",
       });
     } catch (error) {
       console.error('❌ Update profile error:', error);
-      toast({
+      safeToast({
         title: "Update Error",
         description: "Failed to update profile. Please try again.",
         variant: "destructive",
