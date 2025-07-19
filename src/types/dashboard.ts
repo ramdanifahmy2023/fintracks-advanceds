@@ -40,22 +40,45 @@ export interface DashboardSummary {
 
 export interface ChartData {
   revenueTrend: Array<{
-    date: string;
+    month_start: string;
     revenue: number;
     profit: number;
-    orders: number;
+    total_orders: number;
+    platform_name: string;
+    avg_order_value: number;
+    month: number;
+    year: number;
+    total_packages: number;
+    unique_products_sold: number;
   }>;
   platformPerf: Array<{
     platform_name: string;
     total_revenue: number;
     total_profit: number;
-    total_orders: number;
-    completion_rate: number;
+    total_transactions: number;
+    completion_rate_percentage: number;
+    profit_margin_percentage: number;
+    avg_transaction_value: number;
+    total_packages: number;
+    active_days: number;
+    total_stores: number;
+    completed_revenue: number;
+    completed_profit: number;
+    platform_id: string;
   }>;
   productPerf: Array<{
     product_name: string;
     category: string;
+    sku_reference: string;
+    completed_profit: number;
+    completed_revenue: number;
+    total_quantity_sold: number;
+    avg_profit_per_sale: number;
+    profit_margin_percentage: number;
+    first_sale_date: string;
+    last_sale_date: string;
+    platforms_sold_on: number;
     total_sales: number;
-    profit: number;
+    completed_quantity: number;
   }>;
 }

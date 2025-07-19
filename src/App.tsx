@@ -7,7 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/pages/LoginPage";
-import { DashboardPlaceholder } from "@/components/placeholders/DashboardPlaceholder";
+import Dashboard from "@/pages/Dashboard";
 import { UploadPlaceholder } from "@/components/placeholders/UploadPlaceholder";
 import { ManualInputPlaceholder } from "@/components/placeholders/ManualInputPlaceholder";
 import { AnalyticsPlaceholder } from "@/components/placeholders/AnalyticsPlaceholder";
@@ -31,7 +31,7 @@ const App = () => (
             <Route path="/" element={
               <ProtectedRoute>
                 <AppLayout>
-                  <DashboardPlaceholder />
+                  <Dashboard />
                 </AppLayout>
               </ProtectedRoute>
             } />
