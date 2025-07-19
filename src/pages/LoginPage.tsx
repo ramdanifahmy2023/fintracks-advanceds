@@ -133,7 +133,7 @@ export const LoginPage = () => {
         {/* Auth Card */}
         <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
           <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-semibold">
+            <CardTitle className="font-semibold text-2xl text-slate-900">
               {isSignUp ? 'Buat Akun' : 'Selamat Datang Kembali'}
             </CardTitle>
             <CardDescription>
