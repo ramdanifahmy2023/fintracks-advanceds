@@ -1,6 +1,3 @@
-
-// src/components/ui/sonner.tsx
-
 import { useDarkMode } from "@/hooks/useDarkMode";
 import { Toaster as Sonner, toast } from "sonner";
 
