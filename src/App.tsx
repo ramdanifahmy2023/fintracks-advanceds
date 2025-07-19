@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,7 +12,6 @@ import { LoginPage } from "@/pages/LoginPage";
 import Dashboard from "@/pages/Dashboard";
 import UploadPage from "@/pages/UploadPage";
 import { ManualInputPlaceholder } from "@/components/placeholders/ManualInputPlaceholder";
-import { AnalyticsPlaceholder } from "@/components/placeholders/AnalyticsPlaceholder";
 import { ProductsPlaceholder, StoresPlaceholder, UsersPlaceholder, SettingsPlaceholder } from "@/components/placeholders/ProductsPlaceholder";
 import NotFound from "./pages/NotFound";
 import { PWAManager } from "@/components/pwa/PWAManager";
@@ -65,7 +65,7 @@ const App = () => (
             <Route path="/analytics" element={
               <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
                 <AppLayout>
-                 <AnalyticsPage />
+                  <AnalyticsPage />
                 </AppLayout>
               </ProtectedRoute>
             } />
