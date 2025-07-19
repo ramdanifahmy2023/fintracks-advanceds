@@ -58,6 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         if (session?.user) {
           // Defer Supabase calls with setTimeout to prevent deadlock
           setTimeout(async () => {
@@ -82,6 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email);
       if (session?.user) {
         fetchUserProfile(session.user.id).then((userProfile) => {
           if (userProfile) {
@@ -102,20 +104,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       
+      console.log('Attempting login with:', email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: email.trim().toLowerCase(),
+        password: password,
       });
 
+      console.log('Login response:', { data: data?.user?.email, error });
+
       if (error) {
+        console.error('Login error:', error);
         let errorMessage = 'Login failed';
         
         if (error.message.includes('Invalid login credentials')) {
-          errorMessage = 'Invalid email or password';
+          errorMessage = 'Email atau password salah. Silakan coba lagi.';
         } else if (error.message.includes('Email not confirmed')) {
-          errorMessage = 'Please confirm your email address';
+          errorMessage = 'Silakan konfirmasi email Anda terlebih dahulu.';
         } else if (error.message.includes('Too many requests')) {
-          errorMessage = 'Too many login attempts. Please try again later';
+          errorMessage = 'Terlalu banyak percobaan login. Silakan coba lagi nanti.';
+        } else {
+          errorMessage = error.message;
         }
 
         toast({
@@ -128,6 +137,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data.user) {
+        console.log('User authenticated successfully:', data.user.email);
+        
         // Retry fetching user profile in case it's being created by trigger
         let userProfile = await fetchUserProfile(data.user.id);
         let retryCount = 0;
@@ -143,8 +154,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (!userProfile.is_active) {
             await supabase.auth.signOut();
             toast({
-              title: "Account Disabled",
-              description: "Your account has been disabled. Please contact an administrator.",
+              title: "Akun Tidak Aktif",
+              description: "Akun Anda telah dinonaktifkan. Silakan hubungi administrator.",
               variant: "destructive",
             });
             return { error: 'Account disabled' };
@@ -160,13 +171,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUserRole(userProfile.role);
           
           toast({
-            title: "Welcome back!",
-            description: `Successfully logged in as ${userProfile.full_name}`,
+            title: "Selamat Datang!",
+            description: `Berhasil login sebagai ${userProfile.full_name}`,
           });
         } else {
+          console.error('Could not fetch user profile after multiple attempts');
           toast({
             title: "Setup Required",
-            description: "Please contact an administrator to complete your account setup.",
+            description: "Silakan hubungi administrator untuk menyelesaikan setup akun Anda.",
             variant: "destructive",
           });
           await supabase.auth.signOut();
@@ -176,10 +188,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return {};
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Unexpected login error:', error);
       toast({
         title: "Login Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: "Terjadi kesalahan tak terduga. Silakan coba lagi.",
         variant: "destructive",
       });
       return { error: 'An unexpected error occurred' };
@@ -195,13 +207,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserRole(null);
       toast({
         title: "Logged out",
-        description: "You have been successfully logged out.",
+        description: "Anda telah berhasil logout.",
       });
     } catch (error) {
       console.error('Logout error:', error);
       toast({
         title: "Logout Error",
-        description: "An error occurred while logging out.",
+        description: "Terjadi kesalahan saat logout.",
         variant: "destructive",
       });
     }

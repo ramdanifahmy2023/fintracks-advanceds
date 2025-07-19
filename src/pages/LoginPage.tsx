@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,12 +33,14 @@ export const LoginPage = () => {
     e.preventDefault();
     setIsLoading(true);
     
+    console.log('Form submitted with:', { email: email.trim().toLowerCase(), isSignUp });
+    
     if (isSignUp) {
       // Sign up logic
       if (password !== confirmPassword) {
         toast({
-          title: "Password Mismatch",
-          description: "Passwords do not match. Please try again.",
+          title: "Password Tidak Cocok",
+          description: "Password dan konfirmasi password tidak sama.",
           variant: "destructive",
         });
         setIsLoading(false);
@@ -46,7 +49,7 @@ export const LoginPage = () => {
 
       try {
         const { error } = await supabase.auth.signUp({
-          email,
+          email: email.trim().toLowerCase(),
           password,
           options: {
             data: {
@@ -57,28 +60,31 @@ export const LoginPage = () => {
         });
 
         if (error) {
+          console.error('Sign up error:', error);
           toast({
-            title: "Sign Up Error",
+            title: "Error Pendaftaran",
             description: error.message,
             variant: "destructive",
           });
         } else {
           toast({
-            title: "Sign Up Successful!",
-            description: "Please check your email to confirm your account, then sign in.",
+            title: "Pendaftaran Berhasil!",
+            description: "Silakan cek email untuk konfirmasi akun, kemudian login.",
           });
           setIsSignUp(false);
         }
       } catch (error) {
+        console.error('Unexpected signup error:', error);
         toast({
-          title: "Sign Up Error",
-          description: "An unexpected error occurred. Please try again.",
+          title: "Error Pendaftaran",
+          description: "Terjadi kesalahan tak terduga. Silakan coba lagi.",
           variant: "destructive",
         });
       }
     } else {
       // Login logic
-      const result = await login(email, password);
+      console.log('Attempting login...');
+      const result = await login(email.trim().toLowerCase(), password);
       
       if (!result.error && rememberMe) {
         localStorage.setItem('rememberMe', 'true');
@@ -86,6 +92,12 @@ export const LoginPage = () => {
     }
     
     setIsLoading(false);
+  };
+
+  // Quick login helpers for testing
+  const quickLogin = (testEmail: string, testPassword: string) => {
+    setEmail(testEmail);
+    setPassword(testPassword);
   };
 
   return (
@@ -104,16 +116,48 @@ export const LoginPage = () => {
           </div>
         </div>
 
+        {/* Test Accounts Info */}
+        {!isSignUp && (
+          <Card className="border-0 shadow-xl bg-blue-50/95 backdrop-blur-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-blue-800">Akun Test</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => quickLogin('admin.demo@hibanstore.com', 'admin123')}
+                  className="text-xs"
+                >
+                  Super Admin
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => quickLogin('manager.demo@hibanstore.com', 'manager123')}
+                  className="text-xs"
+                >
+                  Manager
+                </Button>
+              </div>
+              <p className="text-xs text-blue-600">Klik untuk mengisi form login</p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Auth Card */}
         <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="text-2xl font-semibold">
-              {isSignUp ? 'Create Account' : 'Welcome Back'}
+              {isSignUp ? 'Buat Akun' : 'Selamat Datang Kembali'}
             </CardTitle>
             <CardDescription>
               {isSignUp 
-                ? 'Create your analytics dashboard account' 
-                : 'Sign in to your analytics dashboard'
+                ? 'Buat akun dashboard analytics Anda' 
+                : 'Masuk ke dashboard analytics Anda'
               }
             </CardDescription>
           </CardHeader>
@@ -121,11 +165,11 @@ export const LoginPage = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {isSignUp && (
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
+                  <Label htmlFor="fullName">Nama Lengkap</Label>
                   <Input
                     id="fullName"
                     type="text"
-                    placeholder="Enter your full name"
+                    placeholder="Masukkan nama lengkap"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     required={isSignUp}
@@ -135,11 +179,11 @@ export const LoginPage = () => {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="Masukkan email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -153,7 +197,7 @@ export const LoginPage = () => {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder="Masukkan password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -164,11 +208,11 @@ export const LoginPage = () => {
 
               {isSignUp && (
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Label htmlFor="confirmPassword">Konfirmasi Password</Label>
                   <Input
                     id="confirmPassword"
                     type="password"
-                    placeholder="Confirm your password"
+                    placeholder="Konfirmasi password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required={isSignUp}
@@ -187,7 +231,7 @@ export const LoginPage = () => {
                       onCheckedChange={(checked) => setRememberMe(checked as boolean)}
                     />
                     <Label htmlFor="remember" className="text-sm">
-                      Remember me
+                      Ingat saya
                     </Label>
                   </div>
                 )}
@@ -211,10 +255,10 @@ export const LoginPage = () => {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isSignUp ? 'Creating Account...' : 'Signing in...'}
+                    {isSignUp ? 'Membuat Akun...' : 'Masuk...'}
                   </>
                 ) : (
-                  isSignUp ? 'Create Account' : 'Sign In'
+                  isSignUp ? 'Buat Akun' : 'Masuk'
                 )}
               </Button>
             </form>
@@ -227,13 +271,13 @@ export const LoginPage = () => {
                 onClick={() => setIsSignUp(!isSignUp)}
               >
                 {isSignUp 
-                  ? 'Already have an account? Sign in' 
-                  : "Don't have an account? Sign up"
+                  ? 'Sudah punya akun? Masuk' 
+                  : "Belum punya akun? Daftar"
                 }
               </Button>
               
               <p className="text-sm text-muted-foreground">
-                Need help? Contact your administrator
+                Butuh bantuan? Hubungi administrator
               </p>
             </div>
           </CardContent>
