@@ -1,9 +1,9 @@
 import React from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -14,7 +14,7 @@ import { ManualInputPlaceholder } from "@/components/placeholders/ManualInputPla
 import { AnalyticsPage } from "@/pages/AnalyticsPage";
 import { ProductsPlaceholder, StoresPlaceholder, UsersPlaceholder, SettingsPlaceholder } from "@/components/placeholders/ProductsPlaceholder";
 import NotFound from "./pages/NotFound";
-// import { PWAManager } from "@/components/pwa/PWAManager"; // PWAManager dinonaktifkan sementara karena diduga menyebabkan error runtime React.
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 // Konfigurasi QueryClient untuk caching data
 const queryClient = new QueryClient({
@@ -27,13 +27,12 @@ const queryClient = new QueryClient({
 });
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        {/* <PWAManager> */}
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <AuthProvider>
+          <TooltipProvider>
+            <BrowserRouter>
             <Routes>
               {/* Rute Publik */}
               <Route path="/login" element={<LoginPage />} />
@@ -106,11 +105,13 @@ const App = () => (
               {/* Rute jika halaman tidak ditemukan */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
-        {/* </PWAManager> */}
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+            </BrowserRouter>
+            <Toaster position="top-right" />
+          </TooltipProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
