@@ -17,6 +17,7 @@ import { ProductsPage } from "@/pages/ProductsPage";
 import { StoresPage } from "@/pages/StoresPage";
 import { UsersPage } from "@/pages/UsersPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import UserGuidePage from "@/pages/UserGuidePage";
 import NotFound from "./pages/NotFound";
 import { PWAManager } from "@/components/pwa/PWAManager";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -144,6 +145,14 @@ const App = () => {
                       <ProtectedRoute requiredRoles={['super_admin']}>
                         <AppLayout>
                           <SettingsPage />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    } />
+                    
+                    <Route path="/help" element={
+                      <ProtectedRoute>
+                        <AppLayout>
+                          <UserGuidePage />
                         </AppLayout>
                       </ProtectedRoute>
                     } />

@@ -1,3 +1,4 @@
+
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import {
   Store,
   Users,
   Settings,
+  BookOpen,
   X,
 } from 'lucide-react';
 import { NavigationItem } from '@/types/auth';
@@ -31,7 +33,8 @@ const navigationItems: Record<string, NavigationItem[]> = {
     { icon: Package, label: 'Products', path: '/products' },
     { icon: Store, label: 'Stores', path: '/stores' },
     { icon: Users, label: 'User Management', path: '/users' },
-    { icon: Settings, label: 'Settings', path: '/settings' }
+    { icon: Settings, label: 'Settings', path: '/settings' },
+    { icon: BookOpen, label: 'Panduan', path: '/help' }
   ],
   admin: [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -39,15 +42,18 @@ const navigationItems: Record<string, NavigationItem[]> = {
     { icon: PlusCircle, label: 'Input Manual', path: '/manual-input' },
     { icon: BarChart3, label: 'Analytics', path: '/analytics' },
     { icon: Package, label: 'Products', path: '/products' },
-    { icon: Store, label: 'Stores', path: '/stores' }
+    { icon: Store, label: 'Stores', path: '/stores' },
+    { icon: BookOpen, label: 'Panduan', path: '/help' }
   ],
   manager: [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
     { icon: BarChart3, label: 'Analytics', path: '/analytics' },
-    { icon: Package, label: 'Products', path: '/products' }
+    { icon: Package, label: 'Products', path: '/products' },
+    { icon: BookOpen, label: 'Panduan', path: '/help' }
   ],
   viewer: [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/' }
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+    { icon: BookOpen, label: 'Panduan', path: '/help' }
   ]
 };
 
