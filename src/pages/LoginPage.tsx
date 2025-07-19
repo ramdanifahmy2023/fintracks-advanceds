@@ -165,7 +165,7 @@ export const LoginPage = () => {
               <div className="flex items-center justify-between">
                 {!isSignUp && <div className="flex items-center space-x-2">
                     <Checkbox id="remember" checked={rememberMe} onCheckedChange={checked => setRememberMe(checked as boolean)} />
-                    <Label htmlFor="remember" className="text-sm">
+                    <Label htmlFor="remember" className="text-sm rounded bg-slate-50">
                       Ingat saya
                     </Label>
                   </div>}
