@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -6,22 +5,24 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { AnalyticsPage } from "@/pages/AnalyticsPage";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/pages/LoginPage";
 import Dashboard from "@/pages/Dashboard";
 import UploadPage from "@/pages/UploadPage";
-import { ManualInputPlaceholder } from "@/components/placeholders/ManualInputPlaceholder";
+// Import halaman ManualInputPage yang sebenarnya
+import ManualInputPage from "@/pages/ManualInputPage"; 
+import { AnalyticsPage } from "@/pages/AnalyticsPage";
 import { ProductsPlaceholder, StoresPlaceholder, UsersPlaceholder, SettingsPlaceholder } from "@/components/placeholders/ProductsPlaceholder";
 import NotFound from "./pages/NotFound";
 import { PWAManager } from "@/components/pwa/PWAManager";
 
+// Konfigurasi QueryClient untuk caching data
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // Data dianggap fresh selama 5 menit
+      refetchOnWindowFocus: false, // Tidak otomatis fetch ulang saat window focus
     },
   },
 });
@@ -34,79 +35,80 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={<LoginPage />} />
-            
-            {/* Protected Routes */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <Dashboard />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/upload" element={
-              <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
-                <AppLayout>
-                  <UploadPage />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/manual-input" element={
-              <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
-                <AppLayout>
-                  <ManualInputPlaceholder />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/analytics" element={
-              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
-                <AppLayout>
-                  <AnalyticsPage />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/products" element={
-              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
-                <AppLayout>
-                  <ProductsPlaceholder />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/stores" element={
-              <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
-                <AppLayout>
-                  <StoresPlaceholder />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/users" element={
-              <ProtectedRoute requiredRoles={['super_admin']}>
-                <AppLayout>
-                  <UsersPlaceholder />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/settings" element={
-              <ProtectedRoute requiredRoles={['super_admin']}>
-                <AppLayout>
-                  <SettingsPlaceholder />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+            <Routes>
+              {/* Rute Publik */}
+              <Route path="/login" element={<LoginPage />} />
+              
+              {/* Rute Terproteksi */}
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <Dashboard />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/upload" element={
+                <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
+                  <AppLayout>
+                    <UploadPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/manual-input" element={
+                <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
+                  <AppLayout>
+                    {/* Menggunakan komponen ManualInputPage yang sebenarnya */}
+                    <ManualInputPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/analytics" element={
+                <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
+                  <AppLayout>
+                    <AnalyticsPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/products" element={
+                <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
+                  <AppLayout>
+                    <ProductsPlaceholder />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/stores" element={
+                <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
+                  <AppLayout>
+                    <StoresPlaceholder />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/users" element={
+                <ProtectedRoute requiredRoles={['super_admin']}>
+                  <AppLayout>
+                    <UsersPlaceholder />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/settings" element={
+                <ProtectedRoute requiredRoles={['super_admin']}>
+                  <AppLayout>
+                    <SettingsPlaceholder />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              {/* Rute jika halaman tidak ditemukan */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
         </PWAManager>
       </TooltipProvider>
     </AuthProvider>
