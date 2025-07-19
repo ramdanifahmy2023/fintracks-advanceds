@@ -162,7 +162,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Footer */}
           <div className="border-t border-sidebar-border p-4">
-            <div className="text-xs text-sidebar-foreground/70 text-center">By Silent Tech. © 2024 Hiban Analytics</div>
+            <div className="text-xs text-sidebar-foreground/70 text-center">Fintracks Advanced By Silent Techs.</div>
           </div>
         </div>
       </aside>
