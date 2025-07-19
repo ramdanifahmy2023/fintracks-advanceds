@@ -11,6 +11,7 @@ import { Loader2, BarChart3 } from 'lucide-react';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { CreateTestUsersButton } from '@/components/auth/CreateTestUsersButton';
 
 export const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -33,7 +34,7 @@ export const LoginPage = () => {
     e.preventDefault();
     setIsLoading(true);
     
-    console.log('Form submitted with:', { email: email.trim().toLowerCase(), isSignUp });
+    console.log('🔐 Form submitted:', { email: email.trim().toLowerCase(), isSignUp });
     
     if (isSignUp) {
       // Sign up logic
@@ -48,6 +49,8 @@ export const LoginPage = () => {
       }
 
       try {
+        console.log('📝 Attempting signup for:', email.trim());
+        
         const { error } = await supabase.auth.signUp({
           email: email.trim().toLowerCase(),
           password,
@@ -60,13 +63,14 @@ export const LoginPage = () => {
         });
 
         if (error) {
-          console.error('Sign up error:', error);
+          console.error('❌ Sign up error:', error);
           toast({
             title: "Error Pendaftaran",
             description: error.message,
             variant: "destructive",
           });
         } else {
+          console.log('✅ Signup successful');
           toast({
             title: "Pendaftaran Berhasil!",
             description: "Silakan cek email untuk konfirmasi akun, kemudian login.",
@@ -74,7 +78,7 @@ export const LoginPage = () => {
           setIsSignUp(false);
         }
       } catch (error) {
-        console.error('Unexpected signup error:', error);
+        console.error('💥 Unexpected signup error:', error);
         toast({
           title: "Error Pendaftaran",
           description: "Terjadi kesalahan tak terduga. Silakan coba lagi.",
@@ -83,7 +87,7 @@ export const LoginPage = () => {
       }
     } else {
       // Login logic
-      console.log('Attempting login...');
+      console.log('🔑 Attempting login...');
       const result = await login(email.trim().toLowerCase(), password);
       
       if (!result.error && rememberMe) {
@@ -96,6 +100,7 @@ export const LoginPage = () => {
 
   // Quick login helpers for testing
   const quickLogin = (testEmail: string, testPassword: string) => {
+    console.log('⚡ Quick login:', { email: testEmail });
     setEmail(testEmail);
     setPassword(testPassword);
   };
@@ -116,34 +121,40 @@ export const LoginPage = () => {
           </div>
         </div>
 
-        {/* Test Accounts Info */}
+        {/* Debug and Setup Section */}
         {!isSignUp && (
-          <Card className="border-0 shadow-xl bg-blue-50/95 backdrop-blur-sm">
+          <Card className="border-0 shadow-xl bg-red-50/95 backdrop-blur-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-800">Akun Test</CardTitle>
+              <CardTitle className="text-sm font-medium text-red-800">Authentication Setup</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => quickLogin('admin.demo@hibanstore.com', 'admin123')}
-                  className="text-xs"
-                >
-                  Super Admin
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => quickLogin('manager.demo@hibanstore.com', 'manager123')}
-                  className="text-xs"
-                >
-                  Manager
-                </Button>
+            <CardContent className="space-y-3">
+              <div className="text-xs text-red-700">
+                <p className="mb-2">Jika login gagal, klik tombol berikut untuk membuat ulang test accounts:</p>
               </div>
-              <p className="text-xs text-blue-600">Klik untuk mengisi form login</p>
+              <CreateTestUsersButton />
+              <div className="border-t pt-2">
+                <p className="text-xs text-red-600 font-medium mb-2">Test Credentials:</p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => quickLogin('admin.demo@hibanstore.com', 'admin123')}
+                    className="text-xs"
+                  >
+                    Super Admin
+                  </Button>
+                  <Button
+                    type="button" 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => quickLogin('manager.demo@hibanstore.com', 'manager123')}
+                    className="text-xs"
+                  >
+                    Manager
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
