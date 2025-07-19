@@ -13,16 +13,25 @@ import { ManualInputPlaceholder } from "@/components/placeholders/ManualInputPla
 import { AnalyticsPlaceholder } from "@/components/placeholders/AnalyticsPlaceholder";
 import { ProductsPlaceholder, StoresPlaceholder, UsersPlaceholder, SettingsPlaceholder } from "@/components/placeholders/ProductsPlaceholder";
 import NotFound from "./pages/NotFound";
+import { PWAManager } from "@/components/pwa/PWAManager";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+        <PWAManager>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />
@@ -96,6 +105,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
+        </PWAManager>
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
