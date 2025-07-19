@@ -1,19 +1,33 @@
 
-import React from "react";
+// src/components/ui/sonner.tsx
 
-// Temporarily disabled Sonner to prevent conflicts with shadcn toast
-// This component is kept for compatibility but will return null
+import { useDarkMode } from "@/hooks/useDarkMode";
+import { Toaster as Sonner, toast } from "sonner";
 
-type ToasterProps = {
-  theme?: "light" | "dark" | "system";
-  className?: string;
-  toastOptions?: any;
-};
+type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  // Disabled to prevent toast system conflicts
-  console.log('Sonner Toaster disabled to prevent conflicts');
-  return null;
+  const { isDarkMode } = useDarkMode();
+  const theme = isDarkMode ? 'dark' : 'light';
+
+  return (
+    <Sonner
+      theme={theme as ToasterProps["theme"]}
+      className="toaster group"
+      toastOptions={{
+        classNames: {
+          toast:
+            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
+          description: "group-[.toast]:text-muted-foreground",
+          actionButton:
+            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
+          cancelButton:
+            "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+        },
+      }}
+      {...props}
+    />
+  );
 };
 
-export { Toaster };
+export { Toaster, toast };
