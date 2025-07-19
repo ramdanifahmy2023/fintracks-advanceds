@@ -1,10 +1,18 @@
-import { useTheme } from "next-themes"
-import { Toaster as Sonner, toast } from "sonner"
 
-type ToasterProps = React.ComponentProps<typeof Sonner>
+import React from "react";
+import { Toaster as Sonner } from "sonner";
+import { useTheme } from "next-themes";
+
+type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
+  const { theme = "system" } = useTheme();
+
+  // Add safety check for React context
+  if (typeof React === 'undefined') {
+    console.warn('React context not available in Sonner');
+    return null;
+  }
 
   return (
     <Sonner
@@ -23,7 +31,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       {...props}
     />
-  )
-}
+  );
+};
 
-export { Toaster, toast }
+export { Toaster };

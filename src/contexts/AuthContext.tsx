@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, AuthContextType } from '@/types/auth';
 import { useToast } from '@/hooks/use-toast';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
@@ -20,13 +21,12 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Fetch user profile from our custom users table
   const fetchUserProfile = async (userId: string, retryCount = 0): Promise<User | null> => {
     try {
       console.log(`👤 Fetching user profile for ID: ${userId} (attempt ${retryCount + 1})`);
@@ -45,7 +45,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!data) {
         console.warn(`⚠️ No user profile found for ID: ${userId} (attempt ${retryCount + 1})`);
         
-        // Retry up to 3 times with delay for trigger to create profile
         if (retryCount < 3) {
           console.log(`⏳ Retrying in 1 second... (attempt ${retryCount + 2}/4)`);
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -73,13 +72,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log('🚀 Initializing Auth Context...');
     
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log(`🔄 Auth state changed: ${event}`, session?.user?.email || 'No user');
         
         if (session?.user) {
-          // Defer Supabase calls with setTimeout to prevent deadlock
           setTimeout(async () => {
             const userProfile = await fetchUserProfile(session.user.id);
             if (userProfile) {
@@ -116,7 +113,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('🔍 Initial session check:', session?.user?.email || 'No session');
       if (session?.user) {
@@ -181,7 +177,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.user) {
         console.log('✅ User authenticated successfully:', data.user.email);
         
-        // The auth state change listener will handle setting user profile
         toast({
           title: "Login Berhasil!",
           description: `Selamat datang, ${data.user.email}`,
@@ -261,5 +256,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
+  );
+};
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <ErrorBoundary fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center p-8">
+          <p className="text-muted-foreground">Authentication system error. Please refresh.</p>
+        </div>
+      </div>
+    }>
+      <AuthProviderCore>
+        {children}
+      </AuthProviderCore>
+    </ErrorBoundary>
   );
 };
