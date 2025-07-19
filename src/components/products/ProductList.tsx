@@ -26,20 +26,37 @@ export const ProductList: React.FC<ProductListProps> = ({ searchTerm }) => {
   const { data: products, isLoading, error } = useQuery({
     queryKey: ['products', searchTerm],
     queryFn: async () => {
-      let query = supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
+      console.log('ProductList: Starting query with searchTerm:', searchTerm);
+      
+      try {
+        let query = supabase
+          .from('products')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      if (searchTerm) {
-        query = query.or(`product_name.ilike.%${searchTerm}%,sku_reference.ilike.%${searchTerm}%`);
+        if (searchTerm) {
+          query = query.or(`product_name.ilike.%${searchTerm}%,sku_reference.ilike.%${searchTerm}%`);
+        }
+
+        const { data, error } = await query;
+        
+        if (error) {
+          console.error('ProductList: Query error:', error);
+          throw error;
+        }
+        
+        console.log('ProductList: Query result:', data);
+        return data as Product[];
+      } catch (error) {
+        console.error('ProductList: Query failed:', error);
+        throw error;
       }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as Product[];
     },
+    retry: 3,
+    retryDelay: 1000,
   });
+
+  console.log('ProductList: Render state:', { isLoading, error, productsCount: products?.length });
 
   if (isLoading) {
     return (
@@ -63,12 +80,17 @@ export const ProductList: React.FC<ProductListProps> = ({ searchTerm }) => {
   }
 
   if (error) {
+    console.error('ProductList: Displaying error state:', error);
     return (
       <Card>
         <CardContent className="pt-6">
-          <div className="text-center text-muted-foreground">
+          <div className="text-center text-destructive">
             <Package className="mx-auto h-12 w-12 mb-4" />
-            <p>Error loading products. Please try again.</p>
+            <p className="font-medium">Error loading products</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {error instanceof Error ? error.message : 'Unknown error occurred'}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Please try again later.</p>
           </div>
         </CardContent>
       </Card>

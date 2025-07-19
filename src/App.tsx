@@ -27,100 +27,106 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 5 * 60 * 1000, // Data dianggap fresh selama 5 menit
       refetchOnWindowFocus: false, // Tidak otomatis fetch ulang saat window focus
+      retry: 3, // Retry 3 kali jika query gagal
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     },
   },
 });
 
-const App = () => (
-  <ErrorBoundary>
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <TooltipProvider>
-            <PWAManager>
-              <BrowserRouter>
-                <Routes>
-                  {/* Rute Publik */}
-                  <Route path="/login" element={<LoginPage />} />
-                  
-                  {/* Rute Terproteksi */}
-                  <Route path="/" element={
-                    <ProtectedRoute>
-                      <AppLayout>
-                        <Dashboard />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/upload" element={
-                    <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
-                      <AppLayout>
-                        <UploadPage />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/manual-input" element={
-                    <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
-                      <AppLayout>
-                        <ManualInputPage />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/analytics" element={
-                    <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
-                      <AppLayout>
-                        <AnalyticsPage />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/products" element={
-                    <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
-                      <AppLayout>
-                        <ProductsPage />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/stores" element={
-                    <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
-                      <AppLayout>
-                        <StoresPage />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/users" element={
-                    <ProtectedRoute requiredRoles={['super_admin']}>
-                      <AppLayout>
-                        <UsersPage />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/settings" element={
-                    <ProtectedRoute requiredRoles={['super_admin']}>
-                      <AppLayout>
-                        <SettingsPage />
-                      </AppLayout>
-                    </ProtectedRoute>
-                  } />
-                  
-                  {/* Rute jika halaman tidak ditemukan */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-              
-              {/* Toast system - single instance at the end */}
-              <Toaster />
-            </PWAManager>
-          </TooltipProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
-  </ErrorBoundary>
-);
+const App = () => {
+  console.log('App: Rendering with QueryClient configured');
+  
+  return (
+    <ErrorBoundary>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <TooltipProvider>
+              <PWAManager>
+                <BrowserRouter>
+                  <Routes>
+                    {/* Rute Publik */}
+                    <Route path="/login" element={<LoginPage />} />
+                    
+                    {/* Rute Terproteksi */}
+                    <Route path="/" element={
+                      <ProtectedRoute>
+                        <AppLayout>
+                          <Dashboard />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    } />
+                    
+                    <Route path="/upload" element={
+                      <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
+                        <AppLayout>
+                          <UploadPage />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    } />
+                    
+                    <Route path="/manual-input" element={
+                      <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
+                        <AppLayout>
+                          <ManualInputPage />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    } />
+                    
+                    <Route path="/analytics" element={
+                      <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
+                        <AppLayout>
+                          <AnalyticsPage />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    } />
+                    
+                    <Route path="/products" element={
+                      <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
+                        <AppLayout>
+                          <ProductsPage />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    } />
+                    
+                    <Route path="/stores" element={
+                      <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
+                        <AppLayout>
+                          <StoresPage />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    } />
+                    
+                    <Route path="/users" element={
+                      <ProtectedRoute requiredRoles={['super_admin']}>
+                        <AppLayout>
+                          <UsersPage />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    } />
+                    
+                    <Route path="/settings" element={
+                      <ProtectedRoute requiredRoles={['super_admin']}>
+                        <AppLayout>
+                          <SettingsPage />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    } />
+                    
+                    {/* Rute jika halaman tidak ditemukan */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+                
+                {/* Toast system - single instance at the end */}
+                <Toaster />
+              </PWAManager>
+            </TooltipProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
+};
 
 export default App;
