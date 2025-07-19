@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,7 +11,6 @@ import { useDarkMode } from '@/hooks/useDarkMode';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { CreateTestUsersButton } from '@/components/auth/CreateTestUsersButton';
-
 export const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,59 +19,66 @@ export const LoginPage = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
-  const { user, login } = useAuth();
-  const { isDarkMode, toggleDarkMode } = useDarkMode();
-  const { toast } = useToast();
+  const {
+    user,
+    login
+  } = useAuth();
+  const {
+    isDarkMode,
+    toggleDarkMode
+  } = useDarkMode();
+  const {
+    toast
+  } = useToast();
 
   // Redirect if already authenticated
   if (user) {
     return <Navigate to="/" replace />;
   }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    console.log('🔐 Form submitted:', { email: email.trim().toLowerCase(), isSignUp });
-    
+    console.log('🔐 Form submitted:', {
+      email: email.trim().toLowerCase(),
+      isSignUp
+    });
     if (isSignUp) {
       // Sign up logic
       if (password !== confirmPassword) {
         toast({
           title: "Password Tidak Cocok",
           description: "Password dan konfirmasi password tidak sama.",
-          variant: "destructive",
+          variant: "destructive"
         });
         setIsLoading(false);
         return;
       }
-
       try {
         console.log('📝 Attempting signup for:', email.trim());
-        
-        const { error } = await supabase.auth.signUp({
+        const {
+          error
+        } = await supabase.auth.signUp({
           email: email.trim().toLowerCase(),
           password,
           options: {
             data: {
-              full_name: fullName,
+              full_name: fullName
             },
-            emailRedirectTo: `${window.location.origin}/`,
-          },
+            emailRedirectTo: `${window.location.origin}/`
+          }
         });
-
         if (error) {
           console.error('❌ Sign up error:', error);
           toast({
             title: "Error Pendaftaran",
             description: error.message,
-            variant: "destructive",
+            variant: "destructive"
           });
         } else {
           console.log('✅ Signup successful');
           toast({
             title: "Pendaftaran Berhasil!",
-            description: "Silakan cek email untuk konfirmasi akun, kemudian login.",
+            description: "Silakan cek email untuk konfirmasi akun, kemudian login."
           });
           setIsSignUp(false);
         }
@@ -82,31 +87,29 @@ export const LoginPage = () => {
         toast({
           title: "Error Pendaftaran",
           description: "Terjadi kesalahan tak terduga. Silakan coba lagi.",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     } else {
       // Login logic
       console.log('🔑 Attempting login...');
       const result = await login(email.trim().toLowerCase(), password);
-      
       if (!result.error && rememberMe) {
         localStorage.setItem('rememberMe', 'true');
       }
     }
-    
     setIsLoading(false);
   };
 
   // Quick login helpers for testing
   const quickLogin = (testEmail: string, testPassword: string) => {
-    console.log('⚡ Quick login:', { email: testEmail });
+    console.log('⚡ Quick login:', {
+      email: testEmail
+    });
     setEmail(testEmail);
     setPassword(testPassword);
   };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-hero p-4">
+  return <div className="min-h-screen flex items-center justify-center bg-gradient-hero p-4">
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
       
       <div className="w-full max-w-md space-y-8 relative z-10">
@@ -122,42 +125,10 @@ export const LoginPage = () => {
         </div>
 
         {/* Debug and Setup Section */}
-        {!isSignUp && (
-          <Card className="border-0 shadow-xl bg-red-50/95 backdrop-blur-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-red-800">Authentication Setup</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-xs text-red-700">
-                <p className="mb-2">Jika login gagal, klik tombol berikut untuk membuat ulang test accounts:</p>
-              </div>
-              <CreateTestUsersButton />
-              <div className="border-t pt-2">
-                <p className="text-xs text-red-600 font-medium mb-2">Test Credentials:</p>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => quickLogin('admin.demo@hibanstore.com', 'admin123')}
-                    className="text-xs"
-                  >
-                    Super Admin
-                  </Button>
-                  <Button
-                    type="button" 
-                    variant="outline"
-                    size="sm"
-                    onClick={() => quickLogin('manager.demo@hibanstore.com', 'manager123')}
-                    className="text-xs"
-                  >
-                    Manager
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {!isSignUp && <Card className="border-0 shadow-xl bg-red-50/95 backdrop-blur-sm">
+            
+            
+          </Card>}
 
         {/* Auth Card */}
         <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
@@ -166,125 +137,55 @@ export const LoginPage = () => {
               {isSignUp ? 'Buat Akun' : 'Selamat Datang Kembali'}
             </CardTitle>
             <CardDescription>
-              {isSignUp 
-                ? 'Buat akun dashboard analytics Anda' 
-                : 'Masuk ke dashboard analytics Anda'
-              }
+              {isSignUp ? 'Buat akun dashboard analytics Anda' : 'Masuk ke dashboard analytics Anda'}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignUp && (
-                <div className="space-y-2">
+              {isSignUp && <div className="space-y-2">
                   <Label htmlFor="fullName">Nama Lengkap</Label>
-                  <Input
-                    id="fullName"
-                    type="text"
-                    placeholder="Masukkan nama lengkap"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required={isSignUp}
-                    className="h-11"
-                  />
-                </div>
-              )}
+                  <Input id="fullName" type="text" placeholder="Masukkan nama lengkap" value={fullName} onChange={e => setFullName(e.target.value)} required={isSignUp} className="h-11" />
+                </div>}
 
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Masukkan email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                  className="h-11"
-                />
+                <Input id="email" type="email" placeholder="Masukkan email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" className="h-11" />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Masukkan password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete={isSignUp ? "new-password" : "current-password"}
-                  className="h-11"
-                />
+                <Input id="password" type="password" placeholder="Masukkan password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete={isSignUp ? "new-password" : "current-password"} className="h-11" />
               </div>
 
-              {isSignUp && (
-                <div className="space-y-2">
+              {isSignUp && <div className="space-y-2">
                   <Label htmlFor="confirmPassword">Konfirmasi Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="Konfirmasi password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required={isSignUp}
-                    autoComplete="new-password"
-                    className="h-11"
-                  />
-                </div>
-              )}
+                  <Input id="confirmPassword" type="password" placeholder="Konfirmasi password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required={isSignUp} autoComplete="new-password" className="h-11" />
+                </div>}
 
               <div className="flex items-center justify-between">
-                {!isSignUp && (
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="remember"
-                      checked={rememberMe}
-                      onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                    />
+                {!isSignUp && <div className="flex items-center space-x-2">
+                    <Checkbox id="remember" checked={rememberMe} onCheckedChange={checked => setRememberMe(checked as boolean)} />
                     <Label htmlFor="remember" className="text-sm">
                       Ingat saya
                     </Label>
-                  </div>
-                )}
+                  </div>}
                 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={toggleDarkMode}
-                  className="text-muted-foreground hover:text-foreground ml-auto"
-                >
+                <Button type="button" variant="ghost" size="sm" onClick={toggleDarkMode} className="text-muted-foreground hover:text-foreground ml-auto">
                   {isDarkMode ? '☀️' : '🌙'}
                 </Button>
               </div>
 
-              <Button
-                type="submit"
-                className="w-full h-11 bg-gradient-primary hover:opacity-90 text-white font-medium shadow-lg"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
+              <Button type="submit" className="w-full h-11 bg-gradient-primary hover:opacity-90 text-white font-medium shadow-lg" disabled={isLoading}>
+                {isLoading ? <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     {isSignUp ? 'Membuat Akun...' : 'Masuk...'}
-                  </>
-                ) : (
-                  isSignUp ? 'Buat Akun' : 'Masuk'
-                )}
+                  </> : isSignUp ? 'Buat Akun' : 'Masuk'}
               </Button>
             </form>
 
             <div className="mt-6 text-center space-y-4">
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-sm text-muted-foreground hover:text-foreground"
-                onClick={() => setIsSignUp(!isSignUp)}
-              >
-                {isSignUp 
-                  ? 'Sudah punya akun? Masuk' 
-                  : "Belum punya akun? Daftar"
-                }
+              <Button type="button" variant="ghost" className="text-sm text-muted-foreground hover:text-foreground" onClick={() => setIsSignUp(!isSignUp)}>
+                {isSignUp ? 'Sudah punya akun? Masuk' : "Belum punya akun? Daftar"}
               </Button>
               
               <p className="text-sm text-muted-foreground">
@@ -299,6 +200,5 @@ export const LoginPage = () => {
           <p>© 2024 Hiban Analytics. All rights reserved.</p>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
