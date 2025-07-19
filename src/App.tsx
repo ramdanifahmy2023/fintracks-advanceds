@@ -1,111 +1,118 @@
+import React from "react";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { LoginPage } from "@/pages/LoginPage";
+import Dashboard from "@/pages/Dashboard";
+import UploadPage from "@/pages/UploadPage";
+// Import halaman ManualInputPage yang sebenarnya
+import ManualInputPage from "@/pages/ManualInputPage"; 
+import { AnalyticsPage } from "@/pages/AnalyticsPage";
+import { ProductsPlaceholder, StoresPlaceholder, UsersPlaceholder, SettingsPlaceholder } from "@/components/placeholders/ProductsPlaceholder";
+import NotFound from "./pages/NotFound";
+import { PWAManager } from "@/components/pwa/PWAManager";
 
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+// Konfigurasi QueryClient untuk caching data
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // Data dianggap fresh selama 5 menit
+      refetchOnWindowFocus: false, // Tidak otomatis fetch ulang saat window focus
+    },
+  },
+});
 
-// Basic pages without complex dependencies
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import Layout from './components/Layout';
-
-// Remove ALL problematic imports temporarily
-// NO Toaster, NO ThemeProvider, NO complex providers
-
-function App() {
-  return (
-    <Router>
-      <div className="min-h-screen bg-gray-50">
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route
-            path="/dashboard"
-            element={
-              <Layout>
-                <DashboardPage />
-              </Layout>
-            }
-          />
-          <Route
-            path="/upload"
-            element={
-              <Layout>
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold">Upload Data</h1>
-                  <p className="text-gray-600 mt-2">Coming soon...</p>
-                </div>
-              </Layout>
-            }
-          />
-          <Route
-            path="/manual-input"
-            element={
-              <Layout>
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold">Input Manual</h1>
-                  <p className="text-gray-600 mt-2">Coming soon...</p>
-                </div>
-              </Layout>
-            }
-          />
-          <Route
-            path="/analytics"
-            element={
-              <Layout>
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold">Analytics</h1>
-                  <p className="text-gray-600 mt-2">Coming soon...</p>
-                </div>
-              </Layout>
-            }
-          />
-          <Route
-            path="/products"
-            element={
-              <Layout>
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold">Products</h1>
-                  <p className="text-gray-600 mt-2">Coming soon...</p>
-                </div>
-              </Layout>
-            }
-          />
-          <Route
-            path="/stores"
-            element={
-              <Layout>
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold">Stores</h1>
-                  <p className="text-gray-600 mt-2">Coming soon...</p>
-                </div>
-              </Layout>
-            }
-          />
-          <Route
-            path="/users"
-            element={
-              <Layout>
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold">User Management</h1>
-                  <p className="text-gray-600 mt-2">Coming soon...</p>
-                </div>
-              </Layout>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <Layout>
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold">Settings</h1>
-                  <p className="text-gray-600 mt-2">Coming soon...</p>
-                </div>
-              </Layout>
-            }
-          />
-        </Routes>
-      </div>
-    </Router>
-  );
-}
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <TooltipProvider>
+        <PWAManager>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Rute Publik */}
+              <Route path="/login" element={<LoginPage />} />
+              
+              {/* Rute Terproteksi */}
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <Dashboard />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/upload" element={
+                <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
+                  <AppLayout>
+                    <UploadPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/manual-input" element={
+                <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
+                  <AppLayout>
+                    {/* Menggunakan komponen ManualInputPage yang sebenarnya */}
+                    <ManualInputPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/analytics" element={
+                <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
+                  <AppLayout>
+                    <AnalyticsPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/products" element={
+                <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
+                  <AppLayout>
+                    <ProductsPlaceholder />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/stores" element={
+                <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
+                  <AppLayout>
+                    <StoresPlaceholder />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/users" element={
+                <ProtectedRoute requiredRoles={['super_admin']}>
+                  <AppLayout>
+                    <UsersPlaceholder />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/settings" element={
+                <ProtectedRoute requiredRoles={['super_admin']}>
+                  <AppLayout>
+                    <SettingsPlaceholder />
+                  </AppLayout>
+                </ProtectedRoute>
+              } />
+              
+              {/* Rute jika halaman tidak ditemukan */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </PWAManager>
+      </TooltipProvider>
+    </AuthProvider>
+  </QueryClientProvider>
+);
 
 export default App;
