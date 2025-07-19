@@ -1,3 +1,4 @@
+
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -22,12 +23,26 @@ export const AnalyticsControls = ({
   onMetricChange,
   onPlatformsChange
 }: AnalyticsControlsProps) => {
-  const { data: availablePlatforms } = useQuery({
+  const { data: availablePlatforms, error: platformsError } = useQuery({
     queryKey: ['platforms'],
     queryFn: async () => {
-      const { data } = await supabase.from('platforms').select('*').eq('is_active', true);
+      console.log('🔍 Fetching platforms for analytics controls...');
+      const { data, error } = await supabase
+        .from('platforms')
+        .select('*')
+        .eq('is_active', true)
+        .order('platform_name');
+      
+      if (error) {
+        console.error('❌ Error fetching platforms:', error);
+        throw error;
+      }
+      
+      console.log('✅ Platforms fetched:', data?.length || 0);
       return data || [];
-    }
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const handleCompareWithPrevious = () => {
@@ -87,11 +102,21 @@ export const AnalyticsControls = ({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Platforms</SelectItem>
-            {availablePlatforms?.map((platform) => (
-              <SelectItem key={platform.id} value={platform.id}>
-                {platform.platform_name}
+            {platformsError ? (
+              <SelectItem value="error" disabled>
+                Error loading platforms
               </SelectItem>
-            ))}
+            ) : availablePlatforms ? (
+              availablePlatforms.map((platform) => (
+                <SelectItem key={platform.id} value={platform.id}>
+                  {platform.platform_name}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="loading" disabled>
+                Loading platforms...
+              </SelectItem>
+            )}
           </SelectContent>
         </Select>
       </div>

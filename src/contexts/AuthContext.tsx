@@ -26,32 +26,22 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
   const [user, setUser] = React.useState<User | null>(null);
   const [userRole, setUserRole] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [toastReady, setToastReady] = React.useState(false);
+  const [authError, setAuthError] = React.useState<string | null>(null);
   const { toast } = useToast();
 
-  // Initialize toast system with delay to ensure it's ready
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setToastReady(true);
-    }, 100);
-    return () => clearTimeout(timer);
-  }, []);
-
   const safeToast = React.useCallback((options: any) => {
-    if (toastReady && toast) {
-      try {
+    try {
+      if (toast) {
         toast(options);
-      } catch (error) {
-        console.warn('Toast failed, using console log instead:', options);
       }
-    } else {
+    } catch (error) {
       console.log('Toast message:', options.title, options.description);
     }
-  }, [toastReady, toast]);
+  }, [toast]);
 
   const fetchUserProfile = React.useCallback(async (userId: string, retryCount = 0): Promise<User | null> => {
     try {
-      console.log(`👤 Fetching user profile for ID: ${userId} (attempt ${retryCount + 1})`);
+      console.log(`👤 Fetching user profile for ID: ${userId}`);
       
       const { data, error } = await supabase
         .from('users')
@@ -61,32 +51,28 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
 
       if (error) {
         console.error('❌ Error fetching user profile:', error);
+        setAuthError(`Profile fetch error: ${error.message}`);
         return null;
+      }
+
+      if (!data && retryCount < 2) {
+        console.log(`⏳ Retrying profile fetch... (attempt ${retryCount + 2}/3)`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return fetchUserProfile(userId, retryCount + 1);
       }
 
       if (!data) {
-        console.warn(`⚠️ No user profile found for ID: ${userId} (attempt ${retryCount + 1})`);
-        
-        if (retryCount < 3) {
-          console.log(`⏳ Retrying in 1 second... (attempt ${retryCount + 2}/4)`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          return fetchUserProfile(userId, retryCount + 1);
-        }
-        
-        console.error('💥 Failed to fetch user profile after 4 attempts');
+        console.warn('⚠️ No user profile found after retries');
+        setAuthError('User profile not found');
         return null;
       }
 
-      console.log('✅ User profile fetched successfully:', {
-        id: data.id,
-        email: data.email,
-        role: data.role,
-        is_active: data.is_active
-      });
-      
+      console.log('✅ User profile fetched successfully:', data.email);
+      setAuthError(null);
       return data as User;
     } catch (error) {
       console.error('💥 Unexpected error fetching user profile:', error);
+      setAuthError('Unexpected profile fetch error');
       return null;
     }
   }, []);
@@ -96,18 +82,18 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log(`🔄 Auth state changed: ${event}`, session?.user?.email || 'No user');
+        console.log(`🔄 Auth state changed: ${event}`);
         
         if (session?.user) {
-          setTimeout(async () => {
+          try {
             const userProfile = await fetchUserProfile(session.user.id);
             if (userProfile) {
               if (!userProfile.is_active) {
                 console.warn('⚠️ User account is inactive');
                 await supabase.auth.signOut();
                 safeToast({
-                  title: "Akun Tidak Aktif",
-                  description: "Akun Anda telah dinonaktifkan. Silakan hubungi administrator.",
+                  title: "Account Inactive",
+                  description: "Your account has been deactivated. Please contact administrator.",
                   variant: "destructive",
                 });
                 setUser(null);
@@ -118,23 +104,32 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
 
               setUser(userProfile);
               setUserRole(userProfile.role);
-              console.log(`✅ User set in context: ${userProfile.email} (${userProfile.role})`);
+              setAuthError(null);
+              console.log(`✅ User authenticated: ${userProfile.email} (${userProfile.role})`);
             } else {
               console.error('❌ User profile not found in database');
               setUser(null);
               setUserRole(null);
+              setAuthError('Profile not found');
             }
-            setLoading(false);
-          }, 0);
+          } catch (error) {
+            console.error('💥 Error during auth state change:', error);
+            setAuthError('Authentication error');
+            setUser(null);
+            setUserRole(null);
+          }
+          setLoading(false);
         } else {
           console.log('🚪 No user session, clearing state');
           setUser(null);
           setUserRole(null);
+          setAuthError(null);
           setLoading(false);
         }
       }
     );
 
+    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('🔍 Initial session check:', session?.user?.email || 'No session');
       if (session?.user) {
@@ -142,6 +137,7 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
           if (userProfile) {
             setUser(userProfile);
             setUserRole(userProfile.role);
+            setAuthError(null);
             console.log(`✅ Initial user set: ${userProfile.email} (${userProfile.role})`);
           }
           setLoading(false);
@@ -155,11 +151,12 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
       console.log('🧹 Cleaning up auth subscription');
       subscription.unsubscribe();
     };
-  }, [toastReady, fetchUserProfile, safeToast]);
+  }, [fetchUserProfile, safeToast]);
 
   const login = React.useCallback(async (email: string, password: string) => {
     try {
       setLoading(true);
+      setAuthError(null);
       
       console.log('🔐 Attempting login with:', email);
       
@@ -168,25 +165,21 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
         password: password,
       });
 
-      console.log('📨 Login response:', { 
-        user: data?.user?.email, 
-        error: error?.message || 'None' 
-      });
-
       if (error) {
         console.error('❌ Login error:', error);
         let errorMessage = 'Login failed';
         
         if (error.message.includes('Invalid login credentials')) {
-          errorMessage = 'Email atau password salah. Pastikan akun sudah dibuat dengan benar.';
+          errorMessage = 'Invalid email or password. Please check your credentials.';
         } else if (error.message.includes('Email not confirmed')) {
-          errorMessage = 'Silakan konfirmasi email Anda terlebih dahulu.';
+          errorMessage = 'Please confirm your email first.';
         } else if (error.message.includes('Too many requests')) {
-          errorMessage = 'Terlalu banyak percobaan login. Silakan coba lagi nanti.';
+          errorMessage = 'Too many login attempts. Please try again later.';
         } else {
           errorMessage = error.message;
         }
 
+        setAuthError(errorMessage);
         safeToast({
           title: "Login Error",
           description: errorMessage,
@@ -198,22 +191,23 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
 
       if (data.user) {
         console.log('✅ User authenticated successfully:', data.user.email);
-        
         safeToast({
-          title: "Login Berhasil!",
-          description: `Selamat datang, ${data.user.email}`,
+          title: "Login Successful!",
+          description: `Welcome, ${data.user.email}`,
         });
       }
 
       return {};
     } catch (error) {
       console.error('💥 Unexpected login error:', error);
+      const errorMessage = 'An unexpected error occurred. Please try again.';
+      setAuthError(errorMessage);
       safeToast({
         title: "Login Error",
-        description: "Terjadi kesalahan tak terduga. Silakan coba lagi.",
+        description: errorMessage,
         variant: "destructive",
       });
-      return { error: 'An unexpected error occurred' };
+      return { error: errorMessage };
     } finally {
       setLoading(false);
     }
@@ -225,15 +219,16 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
       await supabase.auth.signOut();
       setUser(null);
       setUserRole(null);
+      setAuthError(null);
       safeToast({
         title: "Logged out",
-        description: "Anda telah berhasil logout.",
+        description: "You have been successfully logged out.",
       });
     } catch (error) {
       console.error('❌ Logout error:', error);
       safeToast({
         title: "Logout Error",
-        description: "Terjadi kesalahan saat logout.",
+        description: "An error occurred during logout.",
         variant: "destructive",
       });
     }
@@ -273,6 +268,15 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
     logout,
     updateProfile,
   }), [user, userRole, loading, login, logout, updateProfile]);
+
+  // Don't render error boundary if there's just an auth error
+  if (authError && !user) {
+    return (
+      <AuthContext.Provider value={value}>
+        {children}
+      </AuthContext.Provider>
+    );
+  }
 
   return (
     <AuthContext.Provider value={value}>

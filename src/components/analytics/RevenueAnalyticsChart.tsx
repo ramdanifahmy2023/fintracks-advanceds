@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,7 +22,7 @@ export const RevenueAnalyticsChart = ({
   platforms, 
   onChartClick 
 }: RevenueChartProps) => {
-  const { data: chartData, isLoading } = useRevenueAnalytics(timeframe, platforms);
+  const { data: chartData, isLoading, error } = useRevenueAnalytics(timeframe, platforms);
   const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('line');
   const [showComparison, setShowComparison] = useState(false);
 
@@ -66,6 +67,29 @@ export const RevenueAnalyticsChart = ({
     return null;
   };
 
+  if (error) {
+    return (
+      <Card className="col-span-1 lg:col-span-2">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <TrendingUp className="h-5 w-5 mr-2 text-primary" />
+            Revenue Analytics
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[400px] flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-destructive font-medium">Error loading chart data</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {error instanceof Error ? error.message : 'Failed to load revenue analytics'}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (isLoading) {
     return (
       <Card className="col-span-1 lg:col-span-2">
@@ -77,6 +101,29 @@ export const RevenueAnalyticsChart = ({
         </CardHeader>
         <CardContent>
           <div className="h-[400px] bg-muted rounded animate-pulse" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!chartData || chartData.length === 0) {
+    return (
+      <Card className="col-span-1 lg:col-span-2">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <TrendingUp className="h-5 w-5 mr-2 text-primary" />
+            Revenue Analytics
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[400px] flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-muted-foreground">No data available</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Try adjusting your filters or date range
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -159,20 +206,25 @@ export const RevenueAnalyticsChart = ({
                       metric === 'transactions' ? 'Transactions' : 'Margin %'}
               />
               
-              <Line
-                type="monotone"
-                dataKey="trendLine"
-                stroke="hsl(var(--muted-foreground))"
-                strokeWidth={1}
-                strokeDasharray="3 3"
-                dot={false}
-                name="Trend"
-              />
+              {chartData.some(d => d.trendLine !== undefined) && (
+                <Line
+                  type="monotone"
+                  dataKey="trendLine"
+                  stroke="hsl(var(--muted-foreground))"
+                  strokeWidth={1}
+                  strokeDasharray="3 3"
+                  dot={false}
+                  name="Trend"
+                />
+              )}
             </LineChart>
           ) : chartType === 'bar' ? (
             <RechartsBarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
+              <XAxis 
+                dataKey="date" 
+                tickFormatter={(value) => format(new Date(value), 'MMM dd')}
+              />
               <YAxis tickFormatter={(value) => 
                 metric === 'margin' ? `${value}%` : formatCurrency(value)
               } />
@@ -186,7 +238,10 @@ export const RevenueAnalyticsChart = ({
           ) : (
             <AreaChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
+              <XAxis 
+                dataKey="date"
+                tickFormatter={(value) => format(new Date(value), 'MMM dd')}
+              />
               <YAxis tickFormatter={(value) => 
                 metric === 'margin' ? `${value}%` : formatCurrency(value)
               } />
@@ -208,13 +263,16 @@ export const RevenueAnalyticsChart = ({
             <div>
               <span className="text-muted-foreground">Peak Day:</span>
               <span className="ml-2 font-medium">
-                {chartData?.find(d => d[metric] === Math.max(...chartData.map(x => x[metric])))?.date}
+                {(() => {
+                  const peakData = [...chartData].sort((a, b) => (b[metric] || 0) - (a[metric] || 0))[0];
+                  return peakData ? format(new Date(peakData.date), 'MMM dd') : 'N/A';
+                })()}
               </span>
             </div>
             <div>
               <span className="text-muted-foreground">Average Daily:</span>
               <span className="ml-2 font-medium">
-                {formatCurrency((chartData?.reduce((sum, d) => sum + d[metric], 0) || 0) / (chartData?.length || 1))}
+                {formatCurrency((chartData.reduce((sum, d) => sum + (d[metric] || 0), 0)) / chartData.length)}
               </span>
             </div>
             <div>

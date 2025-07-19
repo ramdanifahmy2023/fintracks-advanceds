@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from '@/components/ui/card';
 import { DollarSign, TrendingUp, BarChart3, Crown, Activity, Star, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useAnalyticsKPI } from '@/hooks/useAnalytics';
@@ -9,7 +10,7 @@ interface KPIGridProps {
 }
 
 export const AnalyticsKPIGrid = ({ timeframe, platforms }: KPIGridProps) => {
-  const { data: kpiData, isLoading } = useAnalyticsKPI(timeframe, platforms);
+  const { data: kpiData, isLoading, error } = useAnalyticsKPI(timeframe, platforms);
   
   const kpiMetrics = [
     {
@@ -59,7 +60,7 @@ export const AnalyticsKPIGrid = ({ timeframe, platforms }: KPIGridProps) => {
     },
     {
       title: "Best Product",
-      value: kpiData?.topProduct?.name?.substring(0, 20) + '...' || 'N/A',
+      value: kpiData?.topProduct?.name ? (kpiData.topProduct.name.length > 20 ? kpiData.topProduct.name.substring(0, 20) + '...' : kpiData.topProduct.name) : 'N/A',
       change: kpiData?.topProductChange || 0,
       trend: kpiData?.topProductTrend || 'neutral',
       icon: Star,
@@ -67,6 +68,23 @@ export const AnalyticsKPIGrid = ({ timeframe, platforms }: KPIGridProps) => {
       subtitle: `${kpiData?.topProduct?.units || 0} units sold`
     }
   ];
+
+  if (error) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card className="col-span-full">
+          <CardContent className="p-6">
+            <div className="text-center text-destructive">
+              <p className="font-medium">Error loading KPI data</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {error instanceof Error ? error.message : 'Failed to load analytics data'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -85,7 +103,7 @@ export const AnalyticsKPIGrid = ({ timeframe, platforms }: KPIGridProps) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {kpiMetrics.map((metric, index) => (
-        <Card key={index} className="hover:shadow-md transition-shadow">
+        <Card key={`kpi-${index}`} className="hover:shadow-md transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
