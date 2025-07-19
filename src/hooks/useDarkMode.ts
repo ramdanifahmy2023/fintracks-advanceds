@@ -1,33 +1,29 @@
-import React from "react"
+import { useState, useEffect } from 'react';
 
 export const useDarkMode = () => {
-  const [isDarkMode, setIsDarkMode] = React.useState(false)
-
-  React.useEffect(() => {
-    // Check initial theme from localStorage or system preference
-    const stored = localStorage.getItem('darkMode')
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    const initialDark = stored ? JSON.parse(stored) : prefersDark
-    
-    setIsDarkMode(initialDark)
-    if (initialDark) {
-      document.documentElement.classList.add('dark')
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Check localStorage first, then system preference
+    const saved = localStorage.getItem('darkMode');
+    if (saved !== null) {
+      return JSON.parse(saved);
     }
-  }, [])
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
 
-  const toggleDarkMode = () => {
-    const newDarkMode = !isDarkMode
-    setIsDarkMode(newDarkMode)
+  useEffect(() => {
+    const root = document.documentElement;
     
-    // Update DOM and localStorage
-    if (newDarkMode) {
-      document.documentElement.classList.add('dark')
+    if (isDarkMode) {
+      root.classList.add('dark');
     } else {
-      document.documentElement.classList.remove('dark')
+      root.classList.remove('dark');
     }
-    
-    localStorage.setItem('darkMode', JSON.stringify(newDarkMode))
-  }
 
-  return { isDarkMode, toggleDarkMode }
-}
+    // Save preference to localStorage
+    localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
+
+  return { isDarkMode, toggleDarkMode };
+};

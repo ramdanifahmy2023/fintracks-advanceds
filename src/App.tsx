@@ -10,17 +10,19 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/pages/LoginPage";
 import Dashboard from "@/pages/Dashboard";
 import UploadPage from "@/pages/UploadPage";
+// Import halaman ManualInputPage yang sebenarnya
 import ManualInputPage from "@/pages/ManualInputPage"; 
 import { AnalyticsPage } from "@/pages/AnalyticsPage";
 import { ProductsPlaceholder, StoresPlaceholder, UsersPlaceholder, SettingsPlaceholder } from "@/components/placeholders/ProductsPlaceholder";
 import NotFound from "./pages/NotFound";
 import { PWAManager } from "@/components/pwa/PWAManager";
 
+// Konfigurasi QueryClient untuk caching data
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,
-      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // Data dianggap fresh selama 5 menit
+      refetchOnWindowFocus: false, // Tidak otomatis fetch ulang saat window focus
     },
   },
 });
@@ -30,12 +32,14 @@ const App = () => (
     <AuthProvider>
       <TooltipProvider>
         <PWAManager>
-          {/* HANYA GUNAKAN SATU TOASTER */}
+          <Toaster />
           <Sonner />
           <BrowserRouter>
             <Routes>
+              {/* Rute Publik */}
               <Route path="/login" element={<LoginPage />} />
               
+              {/* Rute Terproteksi */}
               <Route path="/" element={
                 <ProtectedRoute>
                   <AppLayout>
@@ -55,6 +59,7 @@ const App = () => (
               <Route path="/manual-input" element={
                 <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
                   <AppLayout>
+                    {/* Menggunakan komponen ManualInputPage yang sebenarnya */}
                     <ManualInputPage />
                   </AppLayout>
                 </ProtectedRoute>
@@ -100,6 +105,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
+              {/* Rute jika halaman tidak ditemukan */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

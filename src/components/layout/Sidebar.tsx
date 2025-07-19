@@ -1,15 +1,20 @@
-import React from 'react';
-import { 
-  BarChart3, 
-  Upload, 
-  Plus, 
-  TrendingUp, 
-  Package, 
-  Store, 
-  Users, 
+import { NavLink, useLocation } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import {
+  LayoutDashboard,
+  Upload,
+  PlusCircle,
+  BarChart3,
+  Package,
+  Store,
+  Users,
   Settings,
-  X
+  X,
 } from 'lucide-react';
+import { NavigationItem } from '@/types/auth';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -17,160 +22,139 @@ interface SidebarProps {
   userRole: string;
 }
 
+const navigationItems: Record<string, NavigationItem[]> = {
+  super_admin: [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+    { icon: Upload, label: 'Upload Data', path: '/upload' },
+    { icon: PlusCircle, label: 'Input Manual', path: '/manual-input' },
+    { icon: BarChart3, label: 'Analytics', path: '/analytics' },
+    { icon: Package, label: 'Products', path: '/products' },
+    { icon: Store, label: 'Stores', path: '/stores' },
+    { icon: Users, label: 'User Management', path: '/users' },
+    { icon: Settings, label: 'Settings', path: '/settings' }
+  ],
+  admin: [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+    { icon: Upload, label: 'Upload Data', path: '/upload' },
+    { icon: PlusCircle, label: 'Input Manual', path: '/manual-input' },
+    { icon: BarChart3, label: 'Analytics', path: '/analytics' },
+    { icon: Package, label: 'Products', path: '/products' },
+    { icon: Store, label: 'Stores', path: '/stores' }
+  ],
+  manager: [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+    { icon: BarChart3, label: 'Analytics', path: '/analytics' },
+    { icon: Package, label: 'Products', path: '/products' }
+  ],
+  viewer: [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/' }
+  ]
+};
+
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, userRole }) => {
-  const [currentPath, setCurrentPath] = React.useState(window.location.pathname);
+  const location = useLocation();
+  const items = navigationItems[userRole] || navigationItems.viewer;
 
-  const navigation = [
-    { 
-      name: 'Dashboard', 
-      href: '/', 
-      icon: BarChart3,
-      roles: ['super_admin', 'admin', 'manager', 'viewer']
-    },
-    { 
-      name: 'Upload Data', 
-      href: '/upload', 
-      icon: Upload,
-      roles: ['super_admin', 'admin']
-    },
-    { 
-      name: 'Input Manual', 
-      href: '/manual-input', 
-      icon: Plus,
-      roles: ['super_admin', 'admin', 'manager']
-    },
-    { 
-      name: 'Analytics', 
-      href: '/analytics', 
-      icon: TrendingUp,
-      roles: ['super_admin', 'admin', 'manager']
-    },
-    { 
-      name: 'Products', 
-      href: '/products', 
-      icon: Package,
-      roles: ['super_admin', 'admin', 'manager']
-    },
-    { 
-      name: 'Stores', 
-      href: '/stores', 
-      icon: Store,
-      roles: ['super_admin', 'admin']
-    },
-    { 
-      name: 'User Management', 
-      href: '/users', 
-      icon: Users,
-      roles: ['super_admin']
-    },
-    { 
-      name: 'Settings', 
-      href: '/settings', 
-      icon: Settings,
-      roles: ['super_admin']
-    },
-  ];
-
-  const handleNavigation = (href: string) => {
-    setCurrentPath(href);
-    window.location.href = href;
-    onClose();
+  const isActive = (path: string) => {
+    if (path === '/') {
+      return location.pathname === '/';
+    }
+    return location.pathname.startsWith(path);
   };
-
-  const filteredNavigation = navigation.filter(item => 
-    item.roles.includes(userRole)
-  );
 
   return (
     <>
-      {/* Mobile Overlay */}
+      {/* Mobile overlay */}
       {isOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-black bg-opacity-50 md:hidden"
+        <div
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 md:hidden"
           onClick={onClose}
         />
       )}
 
       {/* Sidebar */}
-      <div className={`
-        fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out
-        md:relative md:translate-x-0 md:top-auto md:z-auto
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        {/* Mobile Header */}
-        <div className="flex items-center justify-between p-4 md:hidden border-b border-gray-200">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <BarChart3 className="h-5 w-5 text-white" />
-            </div>
-            <h1 className="text-lg font-semibold text-gray-900">
-              Hiban Analytics
-            </h1>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Navigation */}
-        <nav className="mt-6 md:mt-0">
-          <div className="px-3">
-            <ul className="space-y-1">
-              {filteredNavigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = currentPath === item.href;
-                
-                return (
-                  <li key={item.name}>
-                    <button
-                      onClick={() => handleNavigation(item.href)}
-                      className={`
-                        w-full group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-left
-                        ${isActive
-                          ? 'bg-blue-100 text-blue-600'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                        }
-                      `}
-                    >
-                      <Icon
-                        className={`mr-3 h-5 w-5 ${
-                          isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-500'
-                        }`}
-                      />
-                      {item.name}
-                      {item.name !== 'Dashboard' && item.name !== 'Upload Data' && (
-                        <span className="ml-auto text-xs text-gray-400">
-                          Soon
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </nav>
-
-        {/* User Role Display */}
-        <div className="absolute bottom-0 left-0 w-full p-4 border-t border-gray-200">
-          <div className="flex items-center">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
-              <span className="text-sm font-medium text-white">
-                {userRole.charAt(0).toUpperCase()}
+      <aside
+        className={cn(
+          'fixed left-0 top-0 z-50 h-full w-64 bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0',
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
+        <div className="flex h-full flex-col">
+          {/* Header */}
+          <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
+                <BarChart3 className="h-5 w-5 text-white" />
+              </div>
+              <span className="font-semibold text-sidebar-foreground">
+                Hiban Analytics
               </span>
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-700">Current Role</p>
-              <p className="text-xs text-gray-500 capitalize">
-                {userRole.replace('_', ' ')}
-              </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="md:hidden p-1 h-8 w-8"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Navigation */}
+          <ScrollArea className="flex-1 px-3 py-4">
+            <nav className="space-y-2">
+              <div className="px-3 py-2">
+                <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight text-sidebar-foreground">
+                  Navigation
+                </h2>
+                <div className="space-y-1">
+                  {items.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActive(item.path);
+                    
+                    return (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        onClick={onClose}
+                        className={cn(
+                          'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                          'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                          active
+                            ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'
+                            : 'text-sidebar-foreground'
+                        )}
+                      >
+                        <Icon className="mr-3 h-4 w-4" />
+                        {item.label}
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              {/* Role Badge */}
+              <div className="px-3 py-2">
+                <div className="rounded-lg bg-sidebar-accent/50 p-3">
+                  <div className="text-xs text-sidebar-foreground/70">Current Role</div>
+                  <div className="text-sm font-medium text-sidebar-foreground mt-1">
+                    {userRole.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </div>
+                </div>
+              </div>
+            </nav>
+          </ScrollArea>
+
+          {/* Footer */}
+          <div className="border-t border-sidebar-border p-4">
+            <div className="text-xs text-sidebar-foreground/70 text-center">
+              © 2024 Hiban Analytics
             </div>
           </div>
         </div>
-      </div>
+      </aside>
     </>
   );
 };

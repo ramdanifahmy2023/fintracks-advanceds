@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -10,10 +11,8 @@ interface AppLayoutProps {
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { userRole } = useAuth();
-  
-  // Temporary static value instead of useIsMobile hook
-  const isMobile = window.innerWidth < 768;
-  
+  const isMobile = useIsMobile();
+
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const closeSidebar = () => setSidebarOpen(false);
 
