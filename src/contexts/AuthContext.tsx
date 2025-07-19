@@ -29,22 +29,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fetch user profile from our custom users table
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('Fetching user profile for ID:', userId);
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        // If user not found in our custom table, create them
-        if (error.code === 'PGRST116') {
-          console.log('User not found in custom users table, will be created by trigger');
-          return null;
-        }
         console.error('Error fetching user profile:', error);
         return null;
       }
 
+      if (!data) {
+        console.warn('No user profile found for ID:', userId, '- May be created by trigger soon');
+        return null;
+      }
+
+      console.log('User profile fetched successfully:', data);
       return data as User;
     } catch (error) {
       console.error('Error fetching user profile:', error);
