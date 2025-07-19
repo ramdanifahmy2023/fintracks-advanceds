@@ -148,7 +148,7 @@ export const LoginPage = () => {
                 </div>}
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="rounded-md bg-slate-50">Email</Label>
                 <Input id="email" type="email" placeholder="Masukkan email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" className="h-11" />
               </div>
 
