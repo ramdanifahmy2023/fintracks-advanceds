@@ -317,7 +317,7 @@ export const SettingsPage = () => {
               <CardDescription>
                 Customize your dashboard experience and preferences
               </CardDescription>
-            </CardContent>
+            </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
