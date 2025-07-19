@@ -14,7 +14,8 @@ import Dashboard from "@/pages/Dashboard";
 import UploadPage from "@/pages/UploadPage";
 import ManualInputPage from "@/pages/ManualInputPage"; 
 import { AnalyticsPage } from "@/pages/AnalyticsPage";
-import { ProductsPlaceholder, StoresPlaceholder, UsersPlaceholder, SettingsPlaceholder } from "@/components/placeholders/ProductsPlaceholder";
+import { ProductsPage } from "@/pages/ProductsPage";
+import { StoresPlaceholder, UsersPlaceholder, SettingsPlaceholder } from "@/components/placeholders/ProductsPlaceholder";
 import NotFound from "./pages/NotFound";
 import { PWAManager } from "@/components/pwa/PWAManager";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -78,7 +79,7 @@ const App = () => (
                     <Route path="/products" element={
                       <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
                         <AppLayout>
-                          <ProductsPlaceholder />
+                          <ProductsPage />
                         </AppLayout>
                       </ProtectedRoute>
                     } />
