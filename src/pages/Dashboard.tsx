@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo } from 'react';
-import { startOfMonth, endOfMonth } from 'date-fns';
+import { useState, useCallback } from 'react';
+import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { GlobalFilters } from '@/components/dashboard/GlobalFilters';
 import { SummaryCards } from '@/components/dashboard/SummaryCards';
@@ -10,7 +10,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, BarChart3 } from 'lucide-react';
 import { FilterState } from '@/types/dashboard';
-import { useDashboardSummary, useChartData, useRealtimeUpdates } from '@/hooks/useDashboard';
+import { useDashboardSummary, useChartData, useRecentTransactions, useRealtimeUpdates } from '@/hooks/useDashboard';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { formatCurrency } from '@/lib/formatters';
 
 const Dashboard = () => {
   const { user, userRole } = useAuth();
@@ -29,6 +33,7 @@ const Dashboard = () => {
 
   const { data: summaryData, isLoading: summaryLoading, error: summaryError } = useDashboardSummary(filters);
   const { data: chartData, isLoading: chartLoading, error: chartError } = useChartData(filters);
+  const { data: recentTransactions, isLoading: transactionsLoading, error: transactionsError } = useRecentTransactions(filters);
 
   const handleFiltersChange = useCallback((newFilters: FilterState) => {
     setFilters(newFilters);
@@ -58,9 +63,14 @@ const Dashboard = () => {
             <p className="text-white/80 mb-4">
               Selamat datang kembali, {user?.full_name}! Monitor performa bisnis marketplace Anda.
             </p>
-            <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
-              {userRole?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-            </span>
+            <div className="flex items-center gap-4">
+              <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
+                {userRole?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </span>
+              <div className="text-sm opacity-90">
+                Periode: {format(filters.dateRange.from, 'dd MMM yyyy')} - {format(filters.dateRange.to, 'dd MMM yyyy')}
+              </div>
+            </div>
           </div>
           <div className="hidden md:block">
             <BarChart3 className="h-24 w-24 text-white/30" />
@@ -154,6 +164,68 @@ const Dashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Recent Transactions Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Transaksi Terbaru</CardTitle>
+          <CardDescription>10 transaksi terakhir berdasarkan filter yang dipilih</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {transactionsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-muted-foreground">Loading transaksi...</div>
+            </div>
+          ) : recentTransactions && recentTransactions.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Platform</TableHead>
+                  <TableHead>No. Pesanan</TableHead>
+                  <TableHead>Produk</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Profit</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentTransactions.map((transaction: any) => (
+                  <TableRow key={transaction.id}>
+                    <TableCell>
+                      {format(new Date(transaction.order_created_at), 'dd MMM yyyy')}
+                    </TableCell>
+                    <TableCell>{transaction.platforms?.platform_name}</TableCell>
+                    <TableCell className="font-medium">{transaction.order_number}</TableCell>
+                    <TableCell className="max-w-xs truncate">{transaction.product_name}</TableCell>
+                    <TableCell>
+                      <Badge variant={
+                        transaction.delivery_status === 'Selesai' ? 'default' :
+                        transaction.delivery_status === 'Sedang Dikirim' ? 'secondary' :
+                        transaction.delivery_status === 'Batal' ? 'destructive' : 'outline'
+                      }>
+                        {transaction.delivery_status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {formatCurrency(transaction.selling_price)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span className={transaction.profit > 0 ? 'text-success' : 'text-destructive'}>
+                        {formatCurrency(transaction.profit)}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center text-muted-foreground py-8">
+              Tidak ada transaksi dalam periode yang dipilih
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

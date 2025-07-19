@@ -110,6 +110,47 @@ export const useChartData = (filters: FilterState) => {
   });
 };
 
+export const useRecentTransactions = (filters: FilterState) => {
+  return useQuery({
+    queryKey: ['recent-transactions', filters],
+    queryFn: async () => {
+      let query = supabase
+        .from('sales_transactions')
+        .select(`
+          id,
+          order_number,
+          product_name,
+          delivery_status,
+          selling_price,
+          profit,
+          order_created_at,
+          platforms!inner(platform_name),
+          stores!inner(store_name)
+        `)
+        .gte('order_created_at', filters.dateRange.from.toISOString())
+        .lte('order_created_at', filters.dateRange.to.toISOString())
+        .order('order_created_at', { ascending: false })
+        .limit(10);
+
+      // Apply platform filter if selected
+      if (filters.platforms.length > 0) {
+        query = query.in('platform_id', filters.platforms);
+      }
+
+      // Apply store filter if selected
+      if (filters.stores.length > 0) {
+        query = query.in('store_id', filters.stores);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 30000, // 30 seconds
+  });
+};
+
 export const useRealtimeUpdates = () => {
   const queryClient = useQueryClient();
   
@@ -122,6 +163,7 @@ export const useRealtimeUpdates = () => {
           // Invalidate dashboard queries on data changes
           queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
           queryClient.invalidateQueries({ queryKey: ['chart-data'] });
+          queryClient.invalidateQueries({ queryKey: ['recent-transactions'] });
         }
       )
       .subscribe();
