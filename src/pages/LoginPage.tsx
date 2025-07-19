@@ -1,304 +1,84 @@
 
-import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, BarChart3 } from 'lucide-react';
-import { useDarkMode } from '@/hooks/useDarkMode';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { CreateTestUsersButton } from '@/components/auth/CreateTestUsersButton';
+import React from 'react';
+import { BarChart3 } from 'lucide-react';
 
-export const LoginPage = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
-  const { user, login } = useAuth();
-  const { isDarkMode, toggleDarkMode } = useDarkMode();
-  const { toast } = useToast();
+const LoginPage = () => {
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
 
-  // Redirect if already authenticated
-  if (user) {
-    return <Navigate to="/" replace />;
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    console.log('🔐 Form submitted:', { email: email.trim().toLowerCase(), isSignUp });
-    
-    if (isSignUp) {
-      // Sign up logic
-      if (password !== confirmPassword) {
-        toast({
-          title: "Password Tidak Cocok",
-          description: "Password dan konfirmasi password tidak sama.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        console.log('📝 Attempting signup for:', email.trim());
-        
-        const { error } = await supabase.auth.signUp({
-          email: email.trim().toLowerCase(),
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-            },
-            emailRedirectTo: `${window.location.origin}/`,
-          },
-        });
-
-        if (error) {
-          console.error('❌ Sign up error:', error);
-          toast({
-            title: "Error Pendaftaran",
-            description: error.message,
-            variant: "destructive",
-          });
-        } else {
-          console.log('✅ Signup successful');
-          toast({
-            title: "Pendaftaran Berhasil!",
-            description: "Silakan cek email untuk konfirmasi akun, kemudian login.",
-          });
-          setIsSignUp(false);
-        }
-      } catch (error) {
-        console.error('💥 Unexpected signup error:', error);
-        toast({
-          title: "Error Pendaftaran",
-          description: "Terjadi kesalahan tak terduga. Silakan coba lagi.",
-          variant: "destructive",
-        });
-      }
-    } else {
-      // Login logic
-      console.log('🔑 Attempting login...');
-      const result = await login(email.trim().toLowerCase(), password);
-      
-      if (!result.error && rememberMe) {
-        localStorage.setItem('rememberMe', 'true');
-      }
-    }
-    
-    setIsLoading(false);
-  };
-
-  // Quick login helpers for testing
-  const quickLogin = (testEmail: string, testPassword: string) => {
-    console.log('⚡ Quick login:', { email: testEmail });
-    setEmail(testEmail);
-    setPassword(testPassword);
+    // Simple redirect without complex auth
+    window.location.href = '/dashboard';
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-hero p-4">
-      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-      
-      <div className="w-full max-w-md space-y-8 relative z-10">
-        {/* Logo and Header */}
-        <div className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
-            <BarChart3 className="h-8 w-8 text-white" />
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
+            <BarChart3 className="h-6 w-6 text-blue-600" />
           </div>
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-white">Hiban Analytics</h1>
-            <p className="text-white/80 text-sm">Marketplace Analytics Dashboard</p>
-          </div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Hiban Analytics
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Marketplace Analytics Dashboard
+          </p>
         </div>
-
-        {/* Debug and Setup Section */}
-        {!isSignUp && (
-          <Card className="border-0 shadow-xl bg-red-50/95 backdrop-blur-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-red-800">Authentication Setup</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-xs text-red-700">
-                <p className="mb-2">Jika login gagal, klik tombol berikut untuk membuat ulang test accounts:</p>
-              </div>
-              <CreateTestUsersButton />
-              <div className="border-t pt-2">
-                <p className="text-xs text-red-600 font-medium mb-2">Test Credentials:</p>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => quickLogin('admin.demo@hibanstore.com', 'admin123')}
-                    className="text-xs"
-                  >
-                    Super Admin
-                  </Button>
-                  <Button
-                    type="button" 
-                    variant="outline"
-                    size="sm"
-                    onClick={() => quickLogin('manager.demo@hibanstore.com', 'manager123')}
-                    className="text-xs"
-                  >
-                    Manager
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Auth Card */}
-        <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-semibold">
-              {isSignUp ? 'Buat Akun' : 'Selamat Datang Kembali'}
-            </CardTitle>
-            <CardDescription>
-              {isSignUp 
-                ? 'Buat akun dashboard analytics Anda' 
-                : 'Masuk ke dashboard analytics Anda'
-              }
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignUp && (
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Nama Lengkap</Label>
-                  <Input
-                    id="fullName"
-                    type="text"
-                    placeholder="Masukkan nama lengkap"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required={isSignUp}
-                    className="h-11"
-                  />
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Masukkan email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                  className="h-11"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Masukkan password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete={isSignUp ? "new-password" : "current-password"}
-                  className="h-11"
-                />
-              </div>
-
-              {isSignUp && (
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Konfirmasi Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="Konfirmasi password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required={isSignUp}
-                    autoComplete="new-password"
-                    className="h-11"
-                  />
-                </div>
-              )}
-
-              <div className="flex items-center justify-between">
-                {!isSignUp && (
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="remember"
-                      checked={rememberMe}
-                      onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                    />
-                    <Label htmlFor="remember" className="text-sm">
-                      Ingat saya
-                    </Label>
-                  </div>
-                )}
-                
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={toggleDarkMode}
-                  className="text-muted-foreground hover:text-foreground ml-auto"
-                >
-                  {isDarkMode ? '☀️' : '🌙'}
-                </Button>
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full h-11 bg-gradient-primary hover:opacity-90 text-white font-medium shadow-lg"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isSignUp ? 'Membuat Akun...' : 'Masuk...'}
-                  </>
-                ) : (
-                  isSignUp ? 'Buat Akun' : 'Masuk'
-                )}
-              </Button>
-            </form>
-
-            <div className="mt-6 text-center space-y-4">
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-sm text-muted-foreground hover:text-foreground"
-                onClick={() => setIsSignUp(!isSignUp)}
-              >
-                {isSignUp 
-                  ? 'Sudah punya akun? Masuk' 
-                  : "Belum punya akun? Daftar"
-                }
-              </Button>
-              
-              <p className="text-sm text-muted-foreground">
-                Butuh bantuan? Hubungi administrator
-              </p>
+        
+        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <label htmlFor="email" className="sr-only">
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <label htmlFor="password" className="sr-only">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </div>
 
-        {/* Footer */}
-        <div className="text-center text-white/60 text-xs">
-          <p>© 2024 Hiban Analytics. All rights reserved.</p>
-        </div>
+          <div>
+            <button
+              type="submit"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Sign in
+            </button>
+          </div>
+          
+          <div className="text-center">
+            <p className="text-xs text-gray-500">
+              Demo: Use any email/password to login
+            </p>
+          </div>
+        </form>
       </div>
     </div>
   );
 };
+
+export default LoginPage;
