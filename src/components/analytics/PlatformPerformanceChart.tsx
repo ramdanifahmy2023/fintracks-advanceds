@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,8 +24,56 @@ export const PlatformPerformanceChart = ({
   const [showDetails, setShowDetails] = useState(false);
 
   const sortedData = useMemo(() => {
-    return platformData?.sort((a, b) => b[sortBy] - a[sortBy]) || [];
+    if (!platformData || !Array.isArray(platformData)) return [];
+    
+    try {
+      // Create a safe copy before sorting
+      return [...platformData].sort((a, b) => (b[sortBy] || 0) - (a[sortBy] || 0));
+    } catch (error) {
+      console.error('Error sorting platform data:', error);
+      return platformData;
+    }
   }, [platformData, sortBy]);
+
+  const topPerformer = useMemo(() => {
+    return sortedData[0]?.platform_name || 'N/A';
+  }, [sortedData]);
+
+  const bestMarginPlatform = useMemo(() => {
+    if (!sortedData || sortedData.length === 0) return 'N/A';
+    
+    try {
+      const marginSorted = [...sortedData].sort((a, b) => (b.margin || 0) - (a.margin || 0));
+      return marginSorted[0]?.platform_name || 'N/A';
+    } catch (error) {
+      console.error('Error calculating best margin platform:', error);
+      return 'N/A';
+    }
+  }, [sortedData]);
+
+  const mostActivePlatform = useMemo(() => {
+    if (!sortedData || sortedData.length === 0) return 'N/A';
+    
+    try {
+      const transactionsSorted = [...sortedData].sort((a, b) => (b.transactions || 0) - (a.transactions || 0));
+      return transactionsSorted[0]?.platform_name || 'N/A';
+    } catch (error) {
+      console.error('Error calculating most active platform:', error);
+      return 'N/A';
+    }
+  }, [sortedData]);
+
+  const growthLeader = useMemo(() => {
+    if (!sortedData || sortedData.length === 0) return 'N/A';
+    
+    try {
+      const growthSorted = [...sortedData].sort((a, b) => (b.growth_rate || 0) - (a.growth_rate || 0));
+      return growthSorted[0]?.platform_name || 'N/A';
+    } catch (error) {
+      console.error('Error calculating growth leader:', error);
+      return 'N/A';
+    }
+  }, [sortedData]);
 
   const handleBarClick = (data: any) => {
     onChartClick({
@@ -188,25 +237,19 @@ export const PlatformPerformanceChart = ({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Top Performer:</span>
-              <span className="ml-2 font-medium">{sortedData[0]?.platform_name}</span>
+              <span className="ml-2 font-medium">{topPerformer}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Best Margin:</span>
-              <span className="ml-2 font-medium">
-                {sortedData.sort((a, b) => b.margin - a.margin)[0]?.platform_name}
-              </span>
+              <span className="ml-2 font-medium">{bestMarginPlatform}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Most Active:</span>
-              <span className="ml-2 font-medium">
-                {sortedData.sort((a, b) => b.transactions - a.transactions)[0]?.platform_name}
-              </span>
+              <span className="ml-2 font-medium">{mostActivePlatform}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Growth Leader:</span>
-              <span className="ml-2 font-medium">
-                {sortedData.sort((a, b) => b.growth_rate - a.growth_rate)[0]?.platform_name}
-              </span>
+              <span className="ml-2 font-medium">{growthLeader}</span>
             </div>
           </div>
         </div>

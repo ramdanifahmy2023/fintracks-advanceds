@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { DollarSign, TrendingUp, BarChart3, Crown, Activity, Star, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useAnalyticsKPI } from '@/hooks/useAnalytics';
 import { formatCurrency } from '@/lib/formatters';
+import { useMemo } from 'react';
 
 interface KPIGridProps {
   timeframe: string;
@@ -12,7 +13,7 @@ interface KPIGridProps {
 export const AnalyticsKPIGrid = ({ timeframe, platforms }: KPIGridProps) => {
   const { data: kpiData, isLoading, error } = useAnalyticsKPI(timeframe, platforms);
   
-  const kpiMetrics = [
+  const kpiMetrics = useMemo(() => [
     {
       title: "Total Revenue",
       value: formatCurrency(kpiData?.totalRevenue || 0),
@@ -67,7 +68,7 @@ export const AnalyticsKPIGrid = ({ timeframe, platforms }: KPIGridProps) => {
       color: "yellow",
       subtitle: `${kpiData?.topProduct?.units || 0} units sold`
     }
-  ];
+  ], [kpiData]);
 
   if (error) {
     return (

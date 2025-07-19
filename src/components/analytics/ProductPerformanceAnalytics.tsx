@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Package } from 'lucide-react';
@@ -13,6 +14,59 @@ export const ProductPerformanceAnalytics = ({ timeframe }: ProductAnalyticsProps
   const [viewMode, setViewMode] = useState<'revenue' | 'profit' | 'units' | 'margin'>('revenue');
   const [showTop, setShowTop] = useState<10 | 20 | 50>(10);
   const { data: productData, isLoading } = useProductPerformance(timeframe, showTop);
+
+  const sortedProductData = useMemo(() => {
+    if (!productData || !Array.isArray(productData)) return [];
+    
+    try {
+      // Create a safe copy before any operations
+      return [...productData];
+    } catch (error) {
+      console.error('Error processing product data:', error);
+      return [];
+    }
+  }, [productData]);
+
+  const bestPerformer = useMemo(() => {
+    if (!sortedProductData || sortedProductData.length === 0) return 'N/A';
+    return sortedProductData[0]?.product_name?.substring(0, 30) + '...' || 'N/A';
+  }, [sortedProductData]);
+
+  const highestMargin = useMemo(() => {
+    if (!sortedProductData || sortedProductData.length === 0) return 0;
+    
+    try {
+      const marginSorted = [...sortedProductData].sort((a, b) => (b.margin || 0) - (a.margin || 0));
+      return marginSorted[0]?.margin?.toFixed(1) || '0';
+    } catch (error) {
+      console.error('Error calculating highest margin:', error);
+      return '0';
+    }
+  }, [sortedProductData]);
+
+  const mostUnitsSold = useMemo(() => {
+    if (!sortedProductData || sortedProductData.length === 0) return 0;
+    
+    try {
+      const unitsSorted = [...sortedProductData].sort((a, b) => (b.total_units || 0) - (a.total_units || 0));
+      return unitsSorted[0]?.total_units?.toLocaleString() || '0';
+    } catch (error) {
+      console.error('Error calculating most units sold:', error);
+      return '0';
+    }
+  }, [sortedProductData]);
+
+  const averageMargin = useMemo(() => {
+    if (!sortedProductData || sortedProductData.length === 0) return '0.0';
+    
+    try {
+      const totalMargin = sortedProductData.reduce((sum, p) => sum + (p.margin || 0), 0);
+      return (totalMargin / sortedProductData.length).toFixed(1);
+    } catch (error) {
+      console.error('Error calculating average margin:', error);
+      return '0.0';
+    }
+  }, [sortedProductData]);
 
   const handleProductClick = (product: any) => {
     console.log('Product clicked:', product);
@@ -85,7 +139,7 @@ export const ProductPerformanceAnalytics = ({ timeframe }: ProductAnalyticsProps
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {productData?.map((product, index) => (
+          {sortedProductData?.map((product, index) => (
             <div 
               key={product.sku_reference} 
               className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors cursor-pointer"
@@ -131,25 +185,19 @@ export const ProductPerformanceAnalytics = ({ timeframe }: ProductAnalyticsProps
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Best Performer:</span>
-              <span className="ml-2 font-medium">{productData?.[0]?.product_name?.substring(0, 30)}...</span>
+              <span className="ml-2 font-medium">{bestPerformer}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Highest Margin:</span>
-              <span className="ml-2 font-medium">
-                {productData?.sort((a, b) => b.margin - a.margin)[0]?.margin.toFixed(1)}%
-              </span>
+              <span className="ml-2 font-medium">{highestMargin}%</span>
             </div>
             <div>
               <span className="text-muted-foreground">Most Units Sold:</span>
-              <span className="ml-2 font-medium">
-                {productData?.sort((a, b) => b.total_units - a.total_units)[0]?.total_units.toLocaleString()}
-              </span>
+              <span className="ml-2 font-medium">{mostUnitsSold}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Average Margin:</span>
-              <span className="ml-2 font-medium">
-                {((productData?.reduce((sum, p) => sum + p.margin, 0) || 0) / (productData?.length || 1)).toFixed(1)}%
-              </span>
+              <span className="ml-2 font-medium">{averageMargin}%</span>
             </div>
           </div>
         </div>

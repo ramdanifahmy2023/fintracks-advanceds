@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,24 @@ export const RevenueAnalyticsChart = ({
   const { data: chartData, isLoading, error } = useRevenueAnalytics(timeframe, platforms);
   const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('line');
   const [showComparison, setShowComparison] = useState(false);
+
+  const peakDay = useMemo(() => {
+    if (!chartData || chartData.length === 0) return 'N/A';
+    
+    try {
+      // Create a safe copy of the array before sorting
+      const sortedData = [...chartData].sort((a, b) => (b[metric] || 0) - (a[metric] || 0));
+      return sortedData[0] ? format(new Date(sortedData[0].date), 'MMM dd') : 'N/A';
+    } catch (error) {
+      console.error('Error calculating peak day:', error);
+      return 'N/A';
+    }
+  }, [chartData, metric]);
+
+  const averageDaily = useMemo(() => {
+    if (!chartData || chartData.length === 0) return 0;
+    return chartData.reduce((sum, d) => sum + (d[metric] || 0), 0) / chartData.length;
+  }, [chartData, metric]);
 
   const handleDataPointClick = (data: any, index: number) => {
     onChartClick({
@@ -262,17 +280,12 @@ export const RevenueAnalyticsChart = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Peak Day:</span>
-              <span className="ml-2 font-medium">
-                {(() => {
-                  const peakData = [...chartData].sort((a, b) => (b[metric] || 0) - (a[metric] || 0))[0];
-                  return peakData ? format(new Date(peakData.date), 'MMM dd') : 'N/A';
-                })()}
-              </span>
+              <span className="ml-2 font-medium">{peakDay}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Average Daily:</span>
               <span className="ml-2 font-medium">
-                {formatCurrency((chartData.reduce((sum, d) => sum + (d[metric] || 0), 0)) / chartData.length)}
+                {formatCurrency(averageDaily)}
               </span>
             </div>
             <div>

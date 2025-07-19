@@ -98,7 +98,7 @@ export const usePlatformPerformance = (timeframe: string, platforms: string[]) =
       console.log('🔍 Fetching platform performance data...', { timeframe, platforms });
       
       try {
-        // Mock data for demonstration
+        // Mock data for demonstration - ensuring immutable structure
         const mockData = [
           {
             platform_name: 'Shopee',
@@ -135,7 +135,8 @@ export const usePlatformPerformance = (timeframe: string, platforms: string[]) =
         ];
         
         console.log('✅ Platform performance data fetched:', mockData.length, 'platforms');
-        return mockData;
+        // Return a frozen copy to prevent mutations
+        return Object.freeze(mockData.map(item => Object.freeze({...item})));
       } catch (error) {
         console.error('❌ Error fetching platform performance:', error);
         throw new Error('Failed to fetch platform performance data');
@@ -155,7 +156,7 @@ export const useProductPerformance = (timeframe: string, limit: number) => {
       console.log('🔍 Fetching product performance data...', { timeframe, limit });
       
       try {
-        // Mock data for demonstration
+        // Mock data for demonstration - ensuring immutable structure
         const mockData = [
           {
             sku_reference: 'KKW001',
@@ -200,7 +201,9 @@ export const useProductPerformance = (timeframe: string, limit: number) => {
         ];
         
         console.log('✅ Product performance data fetched:', mockData.length, 'products');
-        return mockData.slice(0, limit);
+        const limitedData = mockData.slice(0, limit);
+        // Return a frozen copy to prevent mutations
+        return Object.freeze(limitedData.map(item => Object.freeze({...item})));
       } catch (error) {
         console.error('❌ Error fetching product performance:', error);
         throw new Error('Failed to fetch product performance data');
@@ -272,7 +275,7 @@ export const useTrendAnalysis = (timeframe: string) => {
         };
         
         console.log('✅ Trend analysis data fetched successfully');
-        return mockData;
+        return Object.freeze(mockData);
       } catch (error) {
         console.error('❌ Error fetching trend analysis:', error);
         throw new Error('Failed to fetch trend analysis data');
