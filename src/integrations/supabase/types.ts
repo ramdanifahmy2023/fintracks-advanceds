@@ -528,6 +528,10 @@ export type Database = {
         Args: { p_start_date?: string; p_end_date?: string }
         Returns: Json
       }
+      get_analytics_kpi: {
+        Args: { p_timeframe?: string; p_platform_ids?: string[] }
+        Returns: Json
+      }
       get_dashboard_summary: {
         Args: {
           start_date?: string
@@ -549,6 +553,37 @@ export type Database = {
           cancelled_revenue: number
           returned_orders: number
           returned_revenue: number
+        }[]
+      }
+      get_platform_performance: {
+        Args: { p_timeframe?: string; p_platform_ids?: string[] }
+        Returns: {
+          platform_name: string
+          revenue: number
+          profit: number
+          margin: number
+          transactions: number
+        }[]
+      }
+      get_product_performance: {
+        Args: { p_timeframe?: string; p_limit?: number }
+        Returns: {
+          sku_reference: string
+          product_name: string
+          total_revenue: number
+          total_profit: number
+          total_units: number
+          margin: number
+        }[]
+      }
+      get_revenue_analytics: {
+        Args: { p_timeframe?: string; p_platform_ids?: string[] }
+        Returns: {
+          date: string
+          revenue: number
+          profit: number
+          transactions: number
+          margin: number
         }[]
       }
       get_user_role: {
