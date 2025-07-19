@@ -10,12 +10,11 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/pages/LoginPage";
 import Dashboard from "@/pages/Dashboard";
 import UploadPage from "@/pages/UploadPage";
-// Import halaman ManualInputPage yang sebenarnya
-import ManualInputPage from "@/pages/ManualInputPage"; 
+import { ManualInputPlaceholder } from "@/components/placeholders/ManualInputPlaceholder";
 import { AnalyticsPage } from "@/pages/AnalyticsPage";
 import { ProductsPlaceholder, StoresPlaceholder, UsersPlaceholder, SettingsPlaceholder } from "@/components/placeholders/ProductsPlaceholder";
 import NotFound from "./pages/NotFound";
-import { PWAManager } from "@/components/pwa/PWAManager";
+// import { PWAManager } from "@/components/pwa/PWAManager"; // PWAManager dinonaktifkan sementara karena diduga menyebabkan error runtime React.
 
 // Konfigurasi QueryClient untuk caching data
 const queryClient = new QueryClient({
@@ -31,7 +30,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
-        <PWAManager>
+        {/* <PWAManager> */}
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -57,10 +56,9 @@ const App = () => (
               } />
               
               <Route path="/manual-input" element={
-                <ProtectedRoute requiredRoles={['super_admin', 'admin', 'manager']}>
+                <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
                   <AppLayout>
-                    {/* Menggunakan komponen ManualInputPage yang sebenarnya */}
-                    <ManualInputPage />
+                    <ManualInputPlaceholder />
                   </AppLayout>
                 </ProtectedRoute>
               } />
@@ -109,7 +107,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
-        </PWAManager>
+        {/* </PWAManager> */}
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
