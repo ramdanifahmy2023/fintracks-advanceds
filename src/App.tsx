@@ -8,7 +8,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/pages/LoginPage";
 import Dashboard from "@/pages/Dashboard";
-import { UploadPlaceholder } from "@/components/placeholders/UploadPlaceholder";
+import UploadPage from "@/pages/UploadPage";
 import { ManualInputPlaceholder } from "@/components/placeholders/ManualInputPlaceholder";
 import { AnalyticsPlaceholder } from "@/components/placeholders/AnalyticsPlaceholder";
 import { ProductsPlaceholder, StoresPlaceholder, UsersPlaceholder, SettingsPlaceholder } from "@/components/placeholders/ProductsPlaceholder";
@@ -39,7 +39,7 @@ const App = () => (
             <Route path="/upload" element={
               <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
                 <AppLayout>
-                  <UploadPlaceholder />
+                  <UploadPage />
                 </AppLayout>
               </ProtectedRoute>
             } />
