@@ -80,7 +80,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             </div>
             <div className="hidden sm:block">
               <h1 className="text-lg font-semibold text-foreground">
-                Hiban Analytics
+                Fintracks Advanced
               </h1>
             </div>
           </div>
