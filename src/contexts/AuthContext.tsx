@@ -1,11 +1,11 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import * as React from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, AuthContextType } from '@/types/auth';
 import { useToast } from '@/hooks/use-toast';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-const AuthContext = createContext<AuthContextType>({
+const AuthContext = React.createContext<AuthContextType>({
   user: null,
   userRole: null,
   loading: true,
@@ -15,7 +15,7 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
+  const context = React.useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
@@ -23,21 +23,21 @@ export const useAuth = () => {
 };
 
 const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [toastReady, setToastReady] = useState(false);
+  const [user, setUser] = React.useState<User | null>(null);
+  const [userRole, setUserRole] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [toastReady, setToastReady] = React.useState(false);
   const { toast } = useToast();
 
   // Initialize toast system with delay to ensure it's ready
-  useEffect(() => {
+  React.useEffect(() => {
     const timer = setTimeout(() => {
       setToastReady(true);
     }, 100);
     return () => clearTimeout(timer);
   }, []);
 
-  const safeToast = (options: any) => {
+  const safeToast = React.useCallback((options: any) => {
     if (toastReady && toast) {
       try {
         toast(options);
@@ -47,9 +47,9 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
     } else {
       console.log('Toast message:', options.title, options.description);
     }
-  };
+  }, [toastReady, toast]);
 
-  const fetchUserProfile = async (userId: string, retryCount = 0): Promise<User | null> => {
+  const fetchUserProfile = React.useCallback(async (userId: string, retryCount = 0): Promise<User | null> => {
     try {
       console.log(`👤 Fetching user profile for ID: ${userId} (attempt ${retryCount + 1})`);
       
@@ -89,9 +89,9 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
       console.error('💥 Unexpected error fetching user profile:', error);
       return null;
     }
-  };
+  }, []);
 
-  useEffect(() => {
+  React.useEffect(() => {
     console.log('🚀 Initializing Auth Context...');
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -155,9 +155,9 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
       console.log('🧹 Cleaning up auth subscription');
       subscription.unsubscribe();
     };
-  }, [toastReady]);
+  }, [toastReady, fetchUserProfile, safeToast]);
 
-  const login = async (email: string, password: string) => {
+  const login = React.useCallback(async (email: string, password: string) => {
     try {
       setLoading(true);
       
@@ -217,9 +217,9 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
     } finally {
       setLoading(false);
     }
-  };
+  }, [safeToast]);
 
-  const logout = async () => {
+  const logout = React.useCallback(async () => {
     try {
       console.log('🚪 Logging out...');
       await supabase.auth.signOut();
@@ -237,9 +237,9 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
         variant: "destructive",
       });
     }
-  };
+  }, [safeToast]);
 
-  const updateProfile = async (updates: Partial<User>) => {
+  const updateProfile = React.useCallback(async (updates: Partial<User>) => {
     if (!user) return;
 
     try {
@@ -263,16 +263,16 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
         variant: "destructive",
       });
     }
-  };
+  }, [user, safeToast]);
 
-  const value: AuthContextType = {
+  const value: AuthContextType = React.useMemo(() => ({
     user,
     userRole,
     loading,
     login,
     logout,
     updateProfile,
-  };
+  }), [user, userRole, loading, login, logout, updateProfile]);
 
   return (
     <AuthContext.Provider value={value}>
