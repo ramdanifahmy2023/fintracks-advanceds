@@ -1,14 +1,23 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+// This page is no longer used - routing now goes directly to dashboard
+// Keeping for compatibility, but users should be redirected to /login or dashboard
+
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
 
 const Index = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-    </div>
-  );
+    );
+  }
+
+  // Redirect based on auth status
+  return user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />;
 };
 
 export default Index;
