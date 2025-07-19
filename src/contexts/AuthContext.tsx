@@ -36,6 +36,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) {
+        // If user not found in our custom table, create them
+        if (error.code === 'PGRST116') {
+          console.log('User not found in custom users table, will be created by trigger');
+          return null;
+        }
         console.error('Error fetching user profile:', error);
         return null;
       }
@@ -121,7 +126,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data.user) {
-        const userProfile = await fetchUserProfile(data.user.id);
+        // Retry fetching user profile in case it's being created by trigger
+        let userProfile = await fetchUserProfile(data.user.id);
+        let retryCount = 0;
+        
+        while (!userProfile && retryCount < 3) {
+          console.log(`Retrying user profile fetch, attempt ${retryCount + 1}`);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+          userProfile = await fetchUserProfile(data.user.id);
+          retryCount++;
+        }
+        
         if (userProfile) {
           if (!userProfile.is_active) {
             await supabase.auth.signOut();
@@ -146,6 +161,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             title: "Welcome back!",
             description: `Successfully logged in as ${userProfile.full_name}`,
           });
+        } else {
+          toast({
+            title: "Setup Required",
+            description: "Please contact an administrator to complete your account setup.",
+            variant: "destructive",
+          });
+          await supabase.auth.signOut();
+          return { error: 'Profile setup required' };
         }
       }
 
