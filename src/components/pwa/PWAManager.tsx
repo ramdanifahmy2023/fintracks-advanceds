@@ -1,237 +1,193 @@
 import { useEffect, useState } from 'react';
-import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Smartphone, 
-  Download, 
-  Share, 
-  X, 
-  RefreshCw,
-  Wifi,
-  WifiOff
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface PWAManagerProps {
   children: React.ReactNode;
 }
 
-export const PWAManager = ({ children }: PWAManagerProps) => {
-  const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
+export const PWAManager: React.FC<PWAManagerProps> = ({ children }) => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [swError, setSwError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Detect iOS
-    setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent));
-    
-    // Detect if running as PWA
-    setIsStandalone(
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true
-    );
-    
-    // Register service worker
-    registerServiceWorker();
-    
-    // Listen for PWA install prompt
-    const handleBeforeInstallPrompt = (e: any) => {
+    // Enhanced service worker registration with better error handling
+    const registerServiceWorker = async () => {
+      if ('serviceWorker' in navigator) {
+        try {
+          console.log('🔧 PWA: Registering service worker...');
+          
+          const registration = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/',
+            updateViaCache: 'none'
+          });
+          
+          console.log('✅ PWA: Service worker registered successfully');
+          
+          // Handle service worker updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  toast({
+                    title: "App Updated",
+                    description: "A new version is available. Refresh to update.",
+                    action: (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.location.reload()}
+                      >
+                        Refresh
+                      </Button>
+                    ),
+                  });
+                }
+              });
+            }
+          });
+
+          // Listen for service worker errors
+          navigator.serviceWorker.addEventListener('error', (error) => {
+            console.warn('⚠️ PWA: Service worker error (non-critical):', error);
+            setSwError('Service worker encountered an error, but app functionality is not affected.');
+          });
+
+        } catch (error) {
+          console.warn('⚠️ PWA: Service worker registration failed (non-critical):', error);
+          setSwError('Service worker registration failed. App will work without offline capabilities.');
+        }
+      } else {
+        console.log('ℹ️ PWA: Service workers not supported');
+      }
+    };
+
+    // PWA install prompt handling
+    const handleBeforeInstallPrompt = (e: Event) => {
+      console.log('📱 PWA: Install prompt available');
       e.preventDefault();
       setDeferredPrompt(e);
+      setShowInstallPrompt(true);
     };
-    
-    // Listen for online/offline status
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    
+
+    const handleAppInstalled = () => {
+      console.log('✅ PWA: App installed successfully');
+      setDeferredPrompt(null);
+      setShowInstallPrompt(false);
+      toast({
+        title: "App Installed",
+        description: "Fintracks Advanced has been installed successfully!",
+      });
+    };
+
+    // Register event listeners
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    // Register service worker with error handling
+    registerServiceWorker();
+
+    // Cleanup
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, []);
+  }, [toast]);
 
-  const registerServiceWorker = async () => {
-    if ('serviceWorker' in navigator) {
-      try {
-        const registration = await navigator.serviceWorker.register('/sw.js');
-        console.log('SW registered successfully');
-        
-        // Listen for updates
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                setUpdateAvailable(true);
-                toast({
-                  title: "Update Tersedia",
-                  description: "Versi baru aplikasi telah tersedia",
-                  variant: "default"
-                });
-              }
-            });
-          }
-        });
-      } catch (error) {
-        console.log('SW registration failed:', error);
-      }
-    }
-  };
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
 
-  const handleInstallPWA = async () => {
-    if (deferredPrompt) {
+    try {
       deferredPrompt.prompt();
-      const choiceResult = await deferredPrompt.userChoice;
+      const { outcome } = await deferredPrompt.userChoice;
       
-      if (choiceResult.outcome === 'accepted') {
-        toast({
-          title: "App Berhasil Diinstall",
-          description: "Hiban Analytics telah ditambahkan ke home screen",
-          variant: "default"
-        });
+      if (outcome === 'accepted') {
+        console.log('✅ PWA: User accepted install prompt');
+      } else {
+        console.log('❌ PWA: User dismissed install prompt');
       }
       
       setDeferredPrompt(null);
-    }
-  };
-
-  const handleUpdateApp = async () => {
-    setIsRefreshing(true);
-    
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
-    }
-    
-    // Wait a bit for the service worker to update
-    setTimeout(() => {
-      window.location.reload();
-    }, 1000);
-  };
-
-  const handlePullToRefresh = async () => {
-    setIsRefreshing(true);
-    
-    try {
-      // Simulate refresh action
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      window.location.reload();
+      setShowInstallPrompt(false);
     } catch (error) {
-      console.error('Refresh failed:', error);
-    } finally {
-      setIsRefreshing(false);
+      console.error('❌ PWA: Install prompt error:', error);
     }
+  };
+
+  const dismissError = () => {
+    setSwError(null);
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Offline Indicator */}
-      {!isOnline && (
-        <div className="bg-yellow-600 text-white p-2 text-center text-sm">
-          <div className="flex items-center justify-center gap-2">
-            <WifiOff className="h-4 w-4" />
-            <span>Mode Offline - Beberapa fitur mungkin tidak tersedia</span>
-          </div>
-        </div>
-      )}
-
-      {/* PWA Install Banner */}
-      {deferredPrompt && !isStandalone && (
-        <Alert className="m-4 border-blue-200 bg-blue-50">
-          <Smartphone className="h-4 w-4" />
-          <AlertDescription className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span>Install app untuk pengalaman yang lebih baik</span>
+    <>
+      {children}
+      
+      {/* Install prompt */}
+      {showInstallPrompt && (
+        <div className="fixed bottom-4 right-4 bg-background border border-border rounded-lg p-4 shadow-lg max-w-sm z-50">
+          <div className="flex items-start gap-3">
+            <div className="flex-1">
+              <h3 className="font-medium text-foreground">Install App</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Install Fintracks Advanced for quick access and offline use.
+              </p>
             </div>
-            <div className="flex gap-2">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setDeferredPrompt(null)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-              <Button 
-                size="sm"
-                onClick={handleInstallPWA}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Install
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* iOS Install Instructions */}
-      {isIOS && !isStandalone && (
-        <Alert className="m-4 border-blue-200 bg-blue-50">
-          <Share className="h-4 w-4" />
-          <AlertDescription>
-            <div className="flex items-center gap-2 text-sm">
-              Tap <strong>Share</strong> button, then <strong>Add to Home Screen</strong> untuk install
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Update Available Banner */}
-      {updateAvailable && (
-        <Alert className="m-4 border-green-200 bg-green-50">
-          <RefreshCw className="h-4 w-4" />
-          <AlertDescription className="flex items-center justify-between">
-            <span>Update baru tersedia untuk aplikasi</span>
-            <Button 
-              size="sm" 
-              onClick={handleUpdateApp}
-              disabled={isRefreshing}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowInstallPrompt(false)}
+              className="text-muted-foreground hover:text-foreground"
             >
-              {isRefreshing ? (
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              Update
+              ✕
             </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Main App Content */}
-      <div className={cn(
-        "transition-opacity duration-300",
-        isRefreshing ? "opacity-50" : "opacity-100"
-      )}>
-        {children}
-      </div>
-
-      {/* Pull to Refresh Indicator */}
-      {isRefreshing && (
-        <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="bg-primary text-primary-foreground p-3 rounded-full shadow-lg">
-            <RefreshCw className="h-5 w-5 animate-spin" />
+          </div>
+          <div className="flex gap-2 mt-3">
+            <Button
+              size="sm"
+              onClick={handleInstallClick}
+              className="flex-1"
+            >
+              Install
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowInstallPrompt(false)}
+              className="flex-1"
+            >
+              Later
+            </Button>
           </div>
         </div>
       )}
 
-      {/* Offline Data Sync Indicator */}
-      {isOnline && (
-        <div className="fixed bottom-4 right-4 z-50">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Wifi className="h-3 w-3 text-green-500" />
-            <span className="hidden sm:inline">Online</span>
+      {/* Service Worker Error (non-critical) */}
+      {swError && (
+        <div className="fixed bottom-4 left-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4 shadow-lg max-w-md z-50">
+          <div className="flex items-start gap-3">
+            <div className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5">
+              ⚠️
+            </div>
+            <div className="flex-1">
+              <h3 className="font-medium text-yellow-800">PWA Notice</h3>
+              <p className="text-sm text-yellow-700 mt-1">
+                {swError}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={dismissError}
+              className="text-yellow-600 hover:text-yellow-800"
+            >
+              ✕
+            </Button>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
