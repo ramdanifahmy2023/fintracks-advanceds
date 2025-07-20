@@ -36,7 +36,6 @@ export const GlobalFilters = ({ filters, onFiltersChange, loading }: GlobalFilte
   const [storeSearch, setStoreSearch] = useState('');
   const [debugInfo, setDebugInfo] = useState<any>({});
   const [showDebug, setShowDebug] = useState(false);
-  const [isCustomOpen, setIsCustomOpen] = useState(false);
   
   const { data: platforms = [], isLoading: platformsLoading, error: platformsError } = usePlatforms();
   const { data: stores = [], isLoading: storesLoading, error: storesError } = useStores(filters.platforms);
@@ -355,128 +354,7 @@ export const GlobalFilters = ({ filters, onFiltersChange, loading }: GlobalFilte
                         {filters.dateRange.from ? format(filters.dateRange.from, "dd MMM yyyy", { locale: id }) : "Dari"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-80" align="start">
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Cari toko..."
-                        value={storeSearch}
-                        onChange={(e) => setStoreSearch(e.target.value)}
-                        className="pl-8"
-                      />
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onFiltersChange({ ...filters, stores: stores.map(s => s.id) })}
-                        disabled={stores.length === 0}
-                      >
-                        Pilih Semua
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onFiltersChange({ ...filters, stores: [] })}
-                      >
-                        Bersihkan
-                      </Button>
-                    </div>
-
-                    <div className="max-h-48 overflow-y-auto space-y-2">
-                      {storesLoading ? (
-                        <div className="text-sm text-muted-foreground">Loading stores...</div>
-                      ) : stores.length === 0 ? (
-                        <div className="text-sm text-muted-foreground">
-                          {filters.platforms.length === 0 ? 'Pilih platform terlebih dahulu' : 'Tidak ada toko tersedia'}
-                          {debugInfo.directQueries?.stores?.count > 0 && (
-                            <div className="text-xs text-orange-600 mt-1">
-                              Database memiliki {debugInfo.directQueries.stores.count} toko, 
-                              tapi hook tidak bisa mengaksesnya
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        filteredStores.map(store => (
-                          <div key={store.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={store.id}
-                              checked={filters.stores.includes(store.id)}
-                              onCheckedChange={() => handleStoreToggle(store.id)}
-                            />
-                            <Label
-                              htmlFor={store.id}
-                              className="text-sm font-normal cursor-pointer flex-1"
-                            >
-                              {store.store_name}
-                              <span className="text-xs text-muted-foreground block">
-                                {(store.platforms as any)?.platform_name}
-                              </span>
-                            </Label>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              {/* Selected Store Badges */}
-              {filters.stores.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {filters.stores.slice(0, 2).map(storeId => {
-                    const store = stores.find(s => s.id === storeId);
-                    return store ? (
-                      <Badge key={storeId} variant="secondary" className="text-xs">
-                        {store.store_name}
-                        <X 
-                          className="ml-1 h-3 w-3 cursor-pointer" 
-                          onClick={() => handleStoreToggle(storeId)}
-                        />
-                      </Badge>
-                    ) : null;
-                  })}
-                  {filters.stores.length > 2 && (
-                    <Badge variant="secondary" className="text-xs">
-                      +{filters.stores.length - 2} lainnya
-                    </Badge>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Clear All Button */}
-          {(filters.platforms.length > 0 || filters.stores.length > 0 || filters.dateRange.preset !== 'thisMonth') && (
-            <div className="mt-6 pt-4 border-t">
-              <Button variant="outline" size="sm" onClick={clearAllFilters}>
-                <X className="mr-2 h-4 w-4" />
-                Bersihkan Semua Filter
-              </Button>
-            </div>
-          )}
-
-          {/* Debug Toggle for Production */}
-          {!showDebug && (
-            <div className="mt-4 pt-4 border-t">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowDebug(true)}
-                className="text-xs"
-              >
-                <Bug className="mr-2 h-3 w-3" />
-                Show Debug Info
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-};-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
                         selected={filters.dateRange.from}
@@ -653,4 +531,125 @@ export const GlobalFilters = ({ filters, onFiltersChange, loading }: GlobalFilte
                     <ChevronDown className="h-4 w-4 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w
+                <PopoverContent className="w-80" align="start">
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Cari toko..."
+                        value={storeSearch}
+                        onChange={(e) => setStoreSearch(e.target.value)}
+                        className="pl-8"
+                      />
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onFiltersChange({ ...filters, stores: stores.map(s => s.id) })}
+                        disabled={stores.length === 0}
+                      >
+                        Pilih Semua
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onFiltersChange({ ...filters, stores: [] })}
+                      >
+                        Bersihkan
+                      </Button>
+                    </div>
+
+                    <div className="max-h-48 overflow-y-auto space-y-2">
+                      {storesLoading ? (
+                        <div className="text-sm text-muted-foreground">Loading stores...</div>
+                      ) : stores.length === 0 ? (
+                        <div className="text-sm text-muted-foreground">
+                          {filters.platforms.length === 0 ? 'Pilih platform terlebih dahulu' : 'Tidak ada toko tersedia'}
+                          {debugInfo.directQueries?.stores?.count > 0 && (
+                            <div className="text-xs text-orange-600 mt-1">
+                              Database memiliki {debugInfo.directQueries.stores.count} toko, 
+                              tapi hook tidak bisa mengaksesnya
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        filteredStores.map(store => (
+                          <div key={store.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={store.id}
+                              checked={filters.stores.includes(store.id)}
+                              onCheckedChange={() => handleStoreToggle(store.id)}
+                            />
+                            <Label
+                              htmlFor={store.id}
+                              className="text-sm font-normal cursor-pointer flex-1"
+                            >
+                              {store.store_name}
+                              <span className="text-xs text-muted-foreground block">
+                                {(store.platforms as any)?.platform_name}
+                              </span>
+                            </Label>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Selected Store Badges */}
+              {filters.stores.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {filters.stores.slice(0, 2).map(storeId => {
+                    const store = stores.find(s => s.id === storeId);
+                    return store ? (
+                      <Badge key={storeId} variant="secondary" className="text-xs">
+                        {store.store_name}
+                        <X 
+                          className="ml-1 h-3 w-3 cursor-pointer" 
+                          onClick={() => handleStoreToggle(storeId)}
+                        />
+                      </Badge>
+                    ) : null;
+                  })}
+                  {filters.stores.length > 2 && (
+                    <Badge variant="secondary" className="text-xs">
+                      +{filters.stores.length - 2} lainnya
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Clear All Button */}
+          {(filters.platforms.length > 0 || filters.stores.length > 0 || filters.dateRange.preset !== 'thisMonth') && (
+            <div className="mt-6 pt-4 border-t">
+              <Button variant="outline" size="sm" onClick={clearAllFilters}>
+                <X className="mr-2 h-4 w-4" />
+                Bersihkan Semua Filter
+              </Button>
+            </div>
+          )}
+
+          {/* Debug Toggle for Production */}
+          {!showDebug && (
+            <div className="mt-4 pt-4 border-t">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowDebug(true)}
+                className="text-xs"
+              >
+                <Bug className="mr-2 h-3 w-3" />
+                Show Debug Info
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
