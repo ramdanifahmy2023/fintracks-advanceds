@@ -2,7 +2,7 @@ export interface FilterState {
   dateRange: {
     from: Date;
     to: Date;
-    preset: 'today' | 'yesterday' | 'thisWeek' | 'thisMonth' | 'lastMonth' | 'custom';
+    preset?: string;
   };
   platforms: string[];
   stores: string[];

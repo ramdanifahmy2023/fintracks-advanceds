@@ -135,7 +135,15 @@ export const useDashboardSummary = (filters: FilterState) => {
   return useQuery({
     queryKey: ['dashboard-summary', filters],
     queryFn: async () => {
-      console.log('🔍 Fetching dashboard summary with filters:', filters);
+      console.log('🔍 useDashboardSummary: Fetching with filters:', {
+        dateRange: {
+          from: filters.dateRange.from.toISOString().split('T')[0],
+          to: filters.dateRange.to.toISOString().split('T')[0]
+        },
+        platforms: filters.platforms,
+        stores: filters.stores
+      });
+      
       const { data, error } = await supabase.rpc('get_dashboard_summary', {
         start_date: filters.dateRange.from.toISOString().split('T')[0],
         end_date: filters.dateRange.to.toISOString().split('T')[0],
@@ -144,11 +152,11 @@ export const useDashboardSummary = (filters: FilterState) => {
       });
       
       if (error) {
-        console.error('❌ Error fetching dashboard summary:', error);
+        console.error('❌ useDashboardSummary: Error:', error);
         throw error;
       }
       
-      console.log('✅ Dashboard summary fetched:', data?.[0]);
+      console.log('✅ useDashboardSummary: Data fetched:', data?.[0]);
       return data?.[0] as DashboardSummary;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -160,7 +168,14 @@ export const useChartData = (filters: FilterState) => {
   return useQuery({
     queryKey: ['chart-data', filters],
     queryFn: async () => {
-      console.log('🔍 Fetching chart data with filters:', filters);
+      console.log('🔍 useChartData: Fetching with filters:', {
+        dateRange: {
+          from: filters.dateRange.from.toISOString().split('T')[0],
+          to: filters.dateRange.to.toISOString().split('T')[0]
+        },
+        platforms: filters.platforms,
+        stores: filters.stores
+      });
       
       // Revenue trend data
       const revenueTrendQuery = supabase
@@ -192,22 +207,23 @@ export const useChartData = (filters: FilterState) => {
       ]);
 
       if (revenueTrend.error) {
-        console.error('❌ Error fetching revenue trend:', revenueTrend.error);
+        console.error('❌ useChartData: Revenue trend error:', revenueTrend.error);
         throw revenueTrend.error;
       }
       if (platformPerf.error) {
-        console.error('❌ Error fetching platform performance:', platformPerf.error);
+        console.error('❌ useChartData: Platform performance error:', platformPerf.error);
         throw platformPerf.error;
       }
       if (productPerf.error) {
-        console.error('❌ Error fetching product performance:', productPerf.error);
+        console.error('❌ useChartData: Product performance error:', productPerf.error);
         throw productPerf.error;
       }
 
-      console.log('✅ Chart data fetched successfully');
-      console.log('📊 Revenue trend:', revenueTrend.data?.length || 0, 'records');
-      console.log('📊 Platform performance:', platformPerf.data?.length || 0, 'records');
-      console.log('📊 Product performance:', productPerf.data?.length || 0, 'records');
+      console.log('✅ useChartData: Data fetched successfully', {
+        revenueTrendCount: revenueTrend.data?.length || 0,
+        platformPerfCount: platformPerf.data?.length || 0,
+        productPerfCount: productPerf.data?.length || 0
+      });
 
       return {
         revenueTrend: revenueTrend.data || [],
@@ -224,7 +240,15 @@ export const useRecentTransactions = (filters: FilterState) => {
   return useQuery({
     queryKey: ['recent-transactions', filters],
     queryFn: async () => {
-      console.log('🔍 Fetching recent transactions with filters:', filters);
+      console.log('🔍 useRecentTransactions: Fetching with filters:', {
+        dateRange: {
+          from: filters.dateRange.from.toISOString().split('T')[0],
+          to: filters.dateRange.to.toISOString().split('T')[0]
+        },
+        platforms: filters.platforms,
+        stores: filters.stores
+      });
+      
       let query = supabase
         .from('sales_transactions')
         .select(`
@@ -256,11 +280,11 @@ export const useRecentTransactions = (filters: FilterState) => {
       const { data, error } = await query;
 
       if (error) {
-        console.error('❌ Error fetching recent transactions:', error);
+        console.error('❌ useRecentTransactions: Error:', error);
         throw error;
       }
 
-      console.log('✅ Recent transactions fetched:', data?.length || 0, 'transactions');
+      console.log('✅ useRecentTransactions: Fetched', data?.length || 0, 'transactions');
       return data || [];
     },
     staleTime: 30000, // 30 seconds
