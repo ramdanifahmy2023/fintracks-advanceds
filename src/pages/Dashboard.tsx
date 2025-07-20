@@ -34,7 +34,6 @@ const Dashboard = () => {
 
   // Update filters when dateRange from context changes
   useEffect(() => {
-    console.log('📅 Dashboard: DateRange from context changed, updating filters');
     setFilters(prev => ({
       ...prev,
       dateRange
@@ -43,35 +42,16 @@ const Dashboard = () => {
 
   useRealtimeUpdates();
 
-  // Log when component mounts and when filters change
-  useEffect(() => {
-    console.log('📊 Dashboard: Component mounted with filters:', filters);
-  }, []);
-
-  useEffect(() => {
-    console.log('📊 Dashboard: Filters changed:', {
-      dateRange: {
-        from: format(filters.dateRange.from, 'yyyy-MM-dd'),
-        to: format(filters.dateRange.to, 'yyyy-MM-dd'),
-        preset: filters.dateRange.preset
-      },
-      platforms: filters.platforms,
-      stores: filters.stores
-    });
-  }, [filters]);
-
   const { data: summaryData, isLoading: summaryLoading, error: summaryError } = useDashboardSummary(filters);
   const { data: chartData, isLoading: chartLoading, error: chartError } = useChartData(filters);
   const { data: recentTransactions, isLoading: transactionsLoading, error: transactionsError } = useRecentTransactions(filters);
 
   const handleFiltersChange = useCallback((newFilters: FilterState) => {
-    console.log('📊 Dashboard: Platform/Store filters changed:', newFilters);
     setFilters(newFilters);
   }, []);
 
   // Handle chart click interactions
   const handlePlatformClick = useCallback((platformId: string) => {
-    console.log('📊 Dashboard: Platform clicked:', platformId);
     setFilters(prev => ({
       ...prev,
       platforms: prev.platforms.includes(platformId) 
@@ -81,9 +61,7 @@ const Dashboard = () => {
   }, []);
 
   const handleCategoryClick = useCallback((category: string) => {
-    console.log('📊 Dashboard: Category clicked:', category);
-    // You can implement category filtering logic here
-    // For now, we'll just log it
+    // Category filtering logic can be implemented here
   }, []);
 
   const hasError = summaryError || chartError;
