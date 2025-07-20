@@ -91,12 +91,12 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
     
     // Set timeout to prevent infinite loading
     const loadingTimeout = setTimeout(() => {
-      if (mounted) {
+      if (mounted && loading) {
         console.warn('⏰ Auth initialization timeout, setting loading to false');
         setLoading(false);
         setInitializing(false);
       }
-    }, 10000); // 10 seconds timeout
+    }, 15000); // 15 seconds timeout (more generous)
 
     const initializeAuth = async () => {
       try {
@@ -159,9 +159,9 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
     // Set up auth state listener - AFTER initial check
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // Skip if we're still initializing
-        if (initializing) {
-          console.log('🔄 Skipping auth state change during initialization:', event);
+        // Skip if we're still initializing or if auth is already complete
+        if (initializing || (!loading && user)) {
+          console.log('🔄 Skipping auth state change during initialization or already authenticated:', event);
           return;
         }
 
