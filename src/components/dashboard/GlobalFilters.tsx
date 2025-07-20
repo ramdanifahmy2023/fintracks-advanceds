@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +8,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, ChevronDown, X, Search } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CalendarIcon, ChevronDown, X, Search, AlertTriangle } from 'lucide-react';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subMonths } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -33,8 +35,25 @@ export const GlobalFilters = ({ filters, onFiltersChange, loading }: GlobalFilte
   const [platformSearch, setPlatformSearch] = useState('');
   const [storeSearch, setStoreSearch] = useState('');
   
-  const { data: platforms = [], isLoading: platformsLoading } = usePlatforms();
-  const { data: stores = [], isLoading: storesLoading } = useStores(filters.platforms);
+  const { data: platforms = [], isLoading: platformsLoading, error: platformsError } = usePlatforms();
+  const { data: stores = [], isLoading: storesLoading, error: storesError } = useStores(filters.platforms);
+
+  // Debug logging for filter state changes
+  useEffect(() => {
+    console.log('🔍 GlobalFilters: Filter state changed:', filters);
+    console.log('🔍 GlobalFilters: Platforms data:', platforms);
+    console.log('🔍 GlobalFilters: Stores data:', stores);
+  }, [filters, platforms, stores]);
+
+  // Debug logging for errors
+  useEffect(() => {
+    if (platformsError) {
+      console.error('❌ GlobalFilters: Platforms error:', platformsError);
+    }
+    if (storesError) {
+      console.error('❌ GlobalFilters: Stores error:', storesError);
+    }
+  }, [platformsError, storesError]);
 
   const getDateRange = (preset: FilterState['dateRange']['preset']) => {
     const today = new Date();
@@ -58,54 +77,67 @@ export const GlobalFilters = ({ filters, onFiltersChange, loading }: GlobalFilte
   };
 
   const handlePresetChange = (preset: FilterState['dateRange']['preset']) => {
+    console.log('🔍 GlobalFilters: Changing date preset to:', preset);
     const range = getDateRange(preset);
-    onFiltersChange({
+    const newFilters = {
       ...filters,
       dateRange: {
         ...range,
         preset
       }
-    });
+    };
+    console.log('🔍 GlobalFilters: New filters after date change:', newFilters);
+    onFiltersChange(newFilters);
   };
 
   const handleDateSelect = (date: Date | undefined, type: 'from' | 'to') => {
     if (!date) return;
     
-    onFiltersChange({
+    console.log('🔍 GlobalFilters: Changing date', type, 'to:', date);
+    const newFilters = {
       ...filters,
       dateRange: {
         ...filters.dateRange,
         [type]: date,
         preset: 'custom'
       }
-    });
+    };
+    console.log('🔍 GlobalFilters: New filters after date select:', newFilters);
+    onFiltersChange(newFilters);
   };
 
   const handlePlatformToggle = (platformId: string) => {
+    console.log('🔍 GlobalFilters: Toggling platform:', platformId);
     const newPlatforms = filters.platforms.includes(platformId)
       ? filters.platforms.filter(id => id !== platformId)
       : [...filters.platforms, platformId];
     
-    onFiltersChange({
+    const newFilters = {
       ...filters,
       platforms: newPlatforms,
       stores: [] // Clear stores when platforms change
-    });
+    };
+    console.log('🔍 GlobalFilters: New filters after platform toggle:', newFilters);
+    onFiltersChange(newFilters);
   };
 
   const handleStoreToggle = (storeId: string) => {
+    console.log('🔍 GlobalFilters: Toggling store:', storeId);
     const newStores = filters.stores.includes(storeId)
       ? filters.stores.filter(id => id !== storeId)
       : [...filters.stores, storeId];
     
-    onFiltersChange({
+    const newFilters = {
       ...filters,
       stores: newStores
-    });
+    };
+    console.log('🔍 GlobalFilters: New filters after store toggle:', newFilters);
+    onFiltersChange(newFilters);
   };
 
   const clearAllFilters = () => {
-    onFiltersChange({
+    console.log('🔍 GlobalFilters: Clearing all filters');
+    const newFilters = {
       dateRange: {
         from: startOfMonth(new Date()),
         to: endOfMonth(new Date()),
@@ -113,7 +145,9 @@ export const GlobalFilters = ({ filters, onFiltersChange, loading }: GlobalFilte
       },
       platforms: [],
       stores: []
-    });
+    };
+    console.log('🔍 GlobalFilters: New filters after clear:', newFilters);
+    onFiltersChange(newFilters);
   };
 
   const filteredPlatforms = platforms.filter(platform =>
@@ -124,9 +158,38 @@ export const GlobalFilters = ({ filters, onFiltersChange, loading }: GlobalFilte
     store.store_name.toLowerCase().includes(storeSearch.toLowerCase())
   );
 
+  // Show error state if there are errors
+  if (platformsError || storesError) {
+    return (
+      <Card className="sticky top-4 z-10 shadow-lg border-2">
+        <CardContent className="p-6">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Terjadi kesalahan saat memuat data filter. Silakan refresh halaman.
+              <br />
+              Error: {platformsError?.message || storesError?.message}
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="sticky top-4 z-10 shadow-lg border-2">
       <CardContent className="p-6">
+        {/* Debug info - remove in production */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mb-4 p-2 bg-muted rounded text-xs">
+            <div>Debug Info:</div>
+            <div>Platforms: {platforms.length} loaded, loading: {platformsLoading.toString()}</div>
+            <div>Stores: {stores.length} loaded, loading: {storesLoading.toString()}</div>
+            <div>Selected platforms: {filters.platforms.length}</div>
+            <div>Selected stores: {filters.stores.length}</div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Date Range Filter */}
           <div className="space-y-3">
@@ -213,8 +276,14 @@ export const GlobalFilters = ({ filters, onFiltersChange, loading }: GlobalFilte
             
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
-                  {filters.platforms.length === 0 ? (
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-between"
+                  disabled={platformsLoading}
+                >
+                  {platformsLoading ? (
+                    "Loading platforms..."
+                  ) : filters.platforms.length === 0 ? (
                     "Pilih Platform"
                   ) : (
                     `${filters.platforms.length} platform dipilih`
@@ -239,6 +308,7 @@ export const GlobalFilters = ({ filters, onFiltersChange, loading }: GlobalFilte
                       variant="outline"
                       size="sm"
                       onClick={() => onFiltersChange({ ...filters, platforms: platforms.map(p => p.id) })}
+                      disabled={platforms.length === 0}
                     >
                       Pilih Semua
                     </Button>
@@ -254,6 +324,8 @@ export const GlobalFilters = ({ filters, onFiltersChange, loading }: GlobalFilte
                   <div className="max-h-48 overflow-y-auto space-y-2">
                     {platformsLoading ? (
                       <div className="text-sm text-muted-foreground">Loading platforms...</div>
+                    ) : platforms.length === 0 ? (
+                      <div className="text-sm text-muted-foreground">Tidak ada platform tersedia</div>
                     ) : (
                       filteredPlatforms.map(platform => (
                         <div key={platform.id} className="flex items-center space-x-2">
@@ -309,10 +381,14 @@ export const GlobalFilters = ({ filters, onFiltersChange, loading }: GlobalFilte
                 <Button 
                   variant="outline" 
                   className="w-full justify-between"
-                  disabled={filters.platforms.length === 0}
+                  disabled={filters.platforms.length === 0 || storesLoading}
                 >
-                  {filters.stores.length === 0 ? (
-                    filters.platforms.length === 0 ? "Pilih platform dulu" : "Pilih Toko"
+                  {storesLoading ? (
+                    "Loading stores..."
+                  ) : filters.platforms.length === 0 ? (
+                    "Pilih platform dulu"
+                  ) : filters.stores.length === 0 ? (
+                    "Pilih Toko"
                   ) : (
                     `${filters.stores.length} toko dipilih`
                   )}
@@ -336,6 +412,7 @@ export const GlobalFilters = ({ filters, onFiltersChange, loading }: GlobalFilte
                       variant="outline"
                       size="sm"
                       onClick={() => onFiltersChange({ ...filters, stores: stores.map(s => s.id) })}
+                      disabled={stores.length === 0}
                     >
                       Pilih Semua
                     </Button>
@@ -351,6 +428,10 @@ export const GlobalFilters = ({ filters, onFiltersChange, loading }: GlobalFilte
                   <div className="max-h-48 overflow-y-auto space-y-2">
                     {storesLoading ? (
                       <div className="text-sm text-muted-foreground">Loading stores...</div>
+                    ) : stores.length === 0 ? (
+                      <div className="text-sm text-muted-foreground">
+                        {filters.platforms.length === 0 ? 'Pilih platform terlebih dahulu' : 'Tidak ada toko tersedia'}
+                      </div>
                     ) : (
                       filteredStores.map(store => (
                         <div key={store.id} className="flex items-center space-x-2">
