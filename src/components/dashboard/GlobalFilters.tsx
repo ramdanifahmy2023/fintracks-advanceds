@@ -71,8 +71,8 @@ export const GlobalFilters = ({ filters, onFiltersChange, loading }: GlobalFilte
           },
           session: {
             exists: !!session,
-            accessToken: session?.access_token ? 'present' : 'missing',
-            refreshToken: session?.refresh_token ? 'present' : 'missing'
+            accessToken: (session as any)?.access_token ? 'present' : 'missing',
+            refreshToken: (session as any)?.refresh_token ? 'present' : 'missing'
           },
           directQueries: {
             platforms: {
