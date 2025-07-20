@@ -89,139 +89,42 @@ const Dashboard = () => {
         loading={summaryLoading}
       />
 
-      <div className="space-y-6">
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="platforms">Platform</TabsTrigger>
-            <TabsTrigger value="products">Produk</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="overview" className="space-y-6">
-            <RevenueTrendChart data={chartData?.revenueTrend || []} loading={chartLoading} />
-          </TabsContent>
-          
-          <TabsContent value="platforms" className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <PlatformChart data={chartData?.platformPerf || []} loading={chartLoading} />
-              <div className="bg-card rounded-lg p-6 border">
-                <h3 className="text-lg font-semibold mb-4">Platform Insights</h3>
-                <div className="space-y-4">
-                  {chartData?.platformPerf?.slice(0, 3).map((platform) => (
-                    <div key={platform.platform_name} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div>
-                        <p className="font-medium">{platform.platform_name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {(platform.total_transactions || 0).toLocaleString()} transaksi
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium text-success">
-                          {(platform.completion_rate_percentage || 0).toFixed(1)}%
-                        </p>
-                        <p className="text-sm text-muted-foreground">completion</p>
-                      </div>
-                    </div>
-                  )) || (
-                    <div className="text-center text-muted-foreground py-8">
-                      {chartLoading ? 'Loading...' : 'Tidak ada data platform'}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="products" className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <CategoryChart data={chartData?.productPerf || []} loading={chartLoading} />
-              <div className="bg-card rounded-lg p-6 border">
-                <h3 className="text-lg font-semibold mb-4">Top Produk</h3>
-                <div className="space-y-4">
-                  {chartData?.productPerf?.slice(0, 5).map((product) => (
-                    <div key={product.sku_reference} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{product.product_name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {product.category || 'Tidak dikategorikan'}
-                        </p>
-                      </div>
-                      <div className="text-right ml-4">
-                        <p className="font-medium text-success">
-                          {((product.completed_profit || 0) / 1000000).toFixed(1)}M
-                        </p>
-                        <p className="text-sm text-muted-foreground">profit</p>
-                      </div>
-                    </div>
-                  )) || (
-                    <div className="text-center text-muted-foreground py-8">
-                      {chartLoading ? 'Loading...' : 'Tidak ada data produk'}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="platforms">Platform</TabsTrigger>
+          <TabsTrigger value="products">Produk</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="overview" className="space-y-6">
+          <RevenueTrendChart data={chartData?.revenueTrend || []} loading={chartLoading} />
+        </TabsContent>
+        
+        <TabsContent value="platforms" className="space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <PlatformChart data={chartData?.platformPerf || []} loading={chartLoading} />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="products" className="space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <CategoryChart data={chartData?.productPerf || []} loading={chartLoading} />
+          </div>
+        </TabsContent>
+      </Tabs>
 
-      {/* Recent Transactions Table */}
       <Card>
         <CardHeader>
           <CardTitle>Transaksi Terbaru</CardTitle>
-          <CardDescription>10 transaksi terakhir berdasarkan filter yang dipilih</CardDescription>
         </CardHeader>
         <CardContent>
           {transactionsLoading ? (
             <div className="flex items-center justify-center py-8">
-              <div className="text-muted-foreground">Loading transaksi...</div>
+              <div className="text-muted-foreground">Loading...</div>
             </div>
-          ) : recentTransactions && recentTransactions.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>Platform</TableHead>
-                  <TableHead>No. Pesanan</TableHead>
-                  <TableHead>Produk</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Profit</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentTransactions.map((transaction: any) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell>
-                      {format(new Date(transaction.order_created_at), 'dd MMM yyyy')}
-                    </TableCell>
-                    <TableCell>{transaction.platforms?.platform_name}</TableCell>
-                    <TableCell className="font-medium">{transaction.order_number}</TableCell>
-                    <TableCell className="max-w-xs truncate">{transaction.product_name}</TableCell>
-                    <TableCell>
-                      <Badge variant={
-                        transaction.delivery_status === 'Selesai' ? 'default' :
-                        transaction.delivery_status === 'Sedang Dikirim' ? 'secondary' :
-                        transaction.delivery_status === 'Batal' ? 'destructive' : 'outline'
-                      }>
-                        {transaction.delivery_status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(transaction.selling_price)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className={transaction.profit > 0 ? 'text-success' : 'text-destructive'}>
-                        {formatCurrency(transaction.profit)}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
           ) : (
             <div className="text-center text-muted-foreground py-8">
-              Tidak ada transaksi dalam periode yang dipilih
+              Data transaksi tersedia setelah upload data CSV
             </div>
           )}
         </CardContent>
