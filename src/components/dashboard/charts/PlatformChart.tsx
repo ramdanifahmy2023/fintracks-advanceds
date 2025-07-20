@@ -113,8 +113,6 @@ export const PlatformChart = ({ data, loading, onPlatformClick }: PlatformChartP
             <BarChart 
               data={sortedData} 
               margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
-              onMouseEnter={(_, index) => setActiveIndex(index)}
-              onMouseLeave={() => setActiveIndex(null)}
             >
               <CartesianGrid 
                 strokeDasharray="3 3" 
@@ -224,8 +222,8 @@ export const PlatformChart = ({ data, loading, onPlatformClick }: PlatformChartP
                 name="Revenue"
                 radius={[4, 4, 0, 0]}
                 onClick={(data, index) => {
-                  if (onPlatformClick && data.platform_id) {
-                    onPlatformClick(data.platform_id);
+                  if (onPlatformClick && data?.payload?.platform_id) {
+                    onPlatformClick(data.payload.platform_id);
                   }
                 }}
                 style={{ cursor: onPlatformClick ? 'pointer' : 'default' }}
