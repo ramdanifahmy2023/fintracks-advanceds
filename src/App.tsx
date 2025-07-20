@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { DateFilterProvider } from '@/contexts/DateFilterContext';
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/pages/LoginPage";
@@ -68,8 +66,7 @@ const App = () => {
     }>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
         <QueryClientProvider client={queryClient}>
-          <DateFilterProvider>
-            <AuthProvider>
+          <AuthProvider>
             <TooltipProvider>
               <PWAManager>
                 <BrowserRouter>
@@ -168,8 +165,7 @@ const App = () => {
                 <Toaster />
               </PWAManager>
             </TooltipProvider>
-            </AuthProvider>
-          </DateFilterProvider>
+          </AuthProvider>
         </QueryClientProvider>
       </ThemeProvider>
     </ErrorBoundary>
