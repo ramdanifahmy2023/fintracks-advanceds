@@ -161,7 +161,7 @@ Refresh page
   }
   return <div className="bg-background border-b border-border">
     <Card className="mx-4 my-2 border-0 shadow-sm bg-card/95 backdrop-blur-sm">
-      <CardContent className="p-4 bg-slate-50 px-[16px] py-0 my-0 mx-0">
+      <CardContent className="p-4 px-[16px] py-0 my-0 mx-0 bg-transparent">
         {/* Compact Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
