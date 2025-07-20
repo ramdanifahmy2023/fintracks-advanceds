@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ChevronDown, Search, AlertTriangle, Store, Smartphone, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FilterState } from '@/types/dashboard';
-import { usePlatforms, useStores } from '@/hooks/useDashboard';
+import { usePlatformsOptimized, useStoresOptimized } from '@/hooks/useOptimizedDashboard';
 
 interface GlobalFiltersProps {
   filters: FilterState;
@@ -22,8 +22,8 @@ export const GlobalFilters = ({ filters, onFiltersChange, loading }: GlobalFilte
   const [platformSearch, setPlatformSearch] = useState('');
   const [storeSearch, setStoreSearch] = useState('');
   
-  const { data: platforms = [], isLoading: platformsLoading, error: platformsError } = usePlatforms();
-  const { data: stores = [], isLoading: storesLoading, error: storesError } = useStores(filters.platforms);
+  const { data: platforms = [], isLoading: platformsLoading, error: platformsError } = usePlatformsOptimized();
+  const { data: stores = [], isLoading: storesLoading, error: storesError } = useStoresOptimized(filters.platforms);
 
   // Memoized filtered data for better performance
   const filteredPlatforms = useMemo(() => 

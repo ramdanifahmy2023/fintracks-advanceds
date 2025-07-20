@@ -1,22 +1,29 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, Suspense, lazy } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDateFilter } from '@/contexts/DateFilterContext';
 import { GlobalFilters } from '@/components/dashboard/GlobalFilters';
 import { GlobalDateFilter } from '@/components/dashboard/GlobalDateFilter';
 import { SummaryCards } from '@/components/dashboard/SummaryCards';
-import { RevenueTrendChart } from '@/components/dashboard/charts/RevenueTrendChart';
-import { PlatformChart } from '@/components/dashboard/charts/PlatformChart';
-import { CategoryChart } from '@/components/dashboard/charts/CategoryChart';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, BarChart3, Filter } from 'lucide-react';
 import { FilterState } from '@/types/dashboard';
-import { useDashboardSummary, useChartData, useRecentTransactions, useRealtimeUpdates } from '@/hooks/useDashboard';
+import { 
+  useOptimizedDashboard, 
+  usePlatformsOptimized, 
+  useStoresOptimized,
+  useOptimizedRealtimeUpdates,
+  useDashboardSelectors,
+  usePrefetchData
+} from '@/hooks/useOptimizedDashboard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/lib/formatters';
+import { DashboardSkeleton, ChartSkeleton } from '@/components/ui/loading-skeleton';
+
+// Lazy load chart components for better performance
+const RevenueTrendChart = lazy(() => import('@/components/dashboard/charts/RevenueTrendChart').then(module => ({ default: module.RevenueTrendChart })));
+const PlatformChart = lazy(() => import('@/components/dashboard/charts/PlatformChart').then(module => ({ default: module.PlatformChart })));
+const CategoryChart = lazy(() => import('@/components/dashboard/charts/CategoryChart').then(module => ({ default: module.CategoryChart })));
 
 const Dashboard = () => {
   const { user, userRole } = useAuth();
@@ -40,17 +47,25 @@ const Dashboard = () => {
     }));
   }, [dateRange]);
 
-  useRealtimeUpdates();
-
-  const { data: summaryData, isLoading: summaryLoading, error: summaryError } = useDashboardSummary(filters);
-  const { data: chartData, isLoading: chartLoading, error: chartError } = useChartData(filters);
-  const { data: recentTransactions, isLoading: transactionsLoading, error: transactionsError } = useRecentTransactions(filters);
+  // Use optimized hooks for better performance
+  const { data: dashboardData, isLoading: dashboardLoading, error: dashboardError } = useOptimizedDashboard(filters);
+  const { data: platforms = [] } = usePlatformsOptimized();
+  const { data: stores = [] } = useStoresOptimized(filters.platforms);
+  
+  // Use selectors for memoized data access
+  const selectedData = useDashboardSelectors(dashboardData);
+  
+  // Setup optimized realtime updates
+  useOptimizedRealtimeUpdates();
+  
+  // Prefetch data for better navigation performance
+  const { prefetchAnalytics, prefetchProducts } = usePrefetchData();
 
   const handleFiltersChange = useCallback((newFilters: FilterState) => {
     setFilters(newFilters);
   }, []);
 
-  // Handle chart click interactions
+  // Handle chart click interactions with prefetching
   const handlePlatformClick = useCallback((platformId: string) => {
     setFilters(prev => ({
       ...prev,
@@ -58,13 +73,16 @@ const Dashboard = () => {
         ? prev.platforms.filter(id => id !== platformId)
         : [...prev.platforms, platformId]
     }));
-  }, []);
+    // Prefetch related data
+    prefetchAnalytics();
+  }, [prefetchAnalytics]);
 
   const handleCategoryClick = useCallback((category: string) => {
     // Category filtering logic can be implemented here
-  }, []);
+    prefetchProducts();
+  }, [prefetchProducts]);
 
-  const hasError = summaryError || chartError;
+  const hasError = dashboardError;
 
   if (hasError) {
     return (
@@ -76,6 +94,18 @@ const Dashboard = () => {
             Terjadi kesalahan saat memuat data dashboard. Silakan refresh halaman atau coba lagi nanti.
           </AlertDescription>
         </Alert>
+      </div>
+    );
+  }
+
+  // Show loading state while fetching data
+  if (dashboardLoading || !selectedData) {
+    return (
+      <div className="space-y-0">
+        <GlobalDateFilter />
+        <div className="space-y-6 px-4 pb-6">
+          <DashboardSkeleton />
+        </div>
       </div>
     );
   }
@@ -112,12 +142,12 @@ const Dashboard = () => {
         <GlobalFilters 
           filters={filters} 
           onFiltersChange={handleFiltersChange}
-          loading={summaryLoading || chartLoading}
+          loading={dashboardLoading}
         />
 
         <SummaryCards 
-          data={summaryData} 
-          loading={summaryLoading}
+          data={selectedData.summary} 
+          loading={dashboardLoading}
         />
 
         <Tabs defaultValue="overview" className="w-full">
@@ -128,29 +158,35 @@ const Dashboard = () => {
           </TabsList>
           
           <TabsContent value="overview" className="space-y-6">
-            <RevenueTrendChart 
-              data={chartData?.revenueTrend || []} 
-              loading={chartLoading} 
-            />
+            <Suspense fallback={<ChartSkeleton />}>
+              <RevenueTrendChart 
+                data={selectedData.revenueTrend} 
+                loading={dashboardLoading} 
+              />
+            </Suspense>
           </TabsContent>
           
           <TabsContent value="platforms" className="space-y-6">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <PlatformChart 
-                data={chartData?.platformPerf || []} 
-                loading={chartLoading}
-                onPlatformClick={handlePlatformClick}
-              />
+              <Suspense fallback={<ChartSkeleton />}>
+                <PlatformChart 
+                  data={selectedData.platformPerformance} 
+                  loading={dashboardLoading}
+                  onPlatformClick={handlePlatformClick}
+                />
+              </Suspense>
             </div>
           </TabsContent>
           
           <TabsContent value="products" className="space-y-6">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <CategoryChart 
-                data={chartData?.productPerf || []} 
-                loading={chartLoading}
-                onCategoryClick={handleCategoryClick}
-              />
+              <Suspense fallback={<ChartSkeleton />}>
+                <CategoryChart 
+                  data={selectedData.topProducts} 
+                  loading={dashboardLoading}
+                  onCategoryClick={handleCategoryClick}
+                />
+              </Suspense>
             </div>
           </TabsContent>
         </Tabs>
@@ -170,9 +206,26 @@ const Dashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {transactionsLoading ? (
+            {dashboardLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="text-muted-foreground">Loading...</div>
+              </div>
+            ) : selectedData.recentTransactions.length > 0 ? (
+              <div className="space-y-2">
+                {selectedData.recentTransactions.slice(0, 5).map((transaction: any) => (
+                  <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <p className="font-medium">{transaction.product_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {transaction.platform_name} • {transaction.store_name}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{transaction.selling_price?.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</p>
+                      <p className="text-sm text-muted-foreground">{transaction.delivery_status}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="text-center text-muted-foreground py-8">
