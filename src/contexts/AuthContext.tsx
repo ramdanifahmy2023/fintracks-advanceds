@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, AuthContextType } from '@/types/auth';
@@ -27,6 +26,7 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
   const [userRole, setUserRole] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [authError, setAuthError] = React.useState<string | null>(null);
+  const [initializing, setInitializing] = React.useState(true);
   const { toast } = useToast();
 
   const safeToast = React.useCallback((options: any) => {
@@ -39,7 +39,7 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
     }
   }, [toast]);
 
-  const fetchUserProfile = React.useCallback(async (userId: string, retryCount = 0): Promise<User | null> => {
+  const fetchUserProfile = React.useCallback(async (userId: string): Promise<User | null> => {
     try {
       console.log(`👤 Fetching user profile for ID: ${userId}`);
       
@@ -55,14 +55,8 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
         return null;
       }
 
-      if (!data && retryCount < 2) {
-        console.log(`⏳ Retrying profile fetch... (attempt ${retryCount + 2}/3)`);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return fetchUserProfile(userId, retryCount + 1);
-      }
-
       if (!data) {
-        console.warn('⚠️ No user profile found after retries');
+        console.warn('⚠️ No user profile found');
         setAuthError('User profile not found');
         return null;
       }
@@ -77,17 +71,106 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
     }
   }, []);
 
+  const setAuthState = React.useCallback((newUser: User | null, role: string | null) => {
+    setUser(newUser);
+    setUserRole(role);
+    setAuthError(null);
+  }, []);
+
+  const clearAuthState = React.useCallback(() => {
+    setUser(null);
+    setUserRole(null);
+    setAuthError(null);
+  }, []);
+
   React.useEffect(() => {
+    let mounted = true;
+    let timeoutId: NodeJS.Timeout;
+
     console.log('🚀 Initializing Auth Context...');
     
+    // Set timeout to prevent infinite loading
+    const loadingTimeout = setTimeout(() => {
+      if (mounted) {
+        console.warn('⏰ Auth initialization timeout, setting loading to false');
+        setLoading(false);
+        setInitializing(false);
+      }
+    }, 10000); // 10 seconds timeout
+
+    const initializeAuth = async () => {
+      try {
+        // Get initial session - ONLY ONCE
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('❌ Session error:', sessionError);
+          if (mounted) {
+            clearAuthState();
+            setLoading(false);
+            setInitializing(false);
+          }
+          return;
+        }
+
+        if (session?.user && mounted) {
+          console.log('🔍 Initial session found:', session.user.email);
+          const userProfile = await fetchUserProfile(session.user.id);
+          
+          if (userProfile && mounted) {
+            if (!userProfile.is_active) {
+              console.warn('⚠️ User account is inactive');
+              await supabase.auth.signOut();
+              safeToast({
+                title: "Account Inactive",
+                description: "Your account has been deactivated. Please contact administrator.",
+                variant: "destructive",
+              });
+              clearAuthState();
+            } else {
+              setAuthState(userProfile, userProfile.role);
+              console.log(`✅ Initial user set: ${userProfile.email} (${userProfile.role})`);
+            }
+          }
+        } else {
+          console.log('🚪 No initial session found');
+          if (mounted) {
+            clearAuthState();
+          }
+        }
+
+        if (mounted) {
+          setLoading(false);
+          setInitializing(false);
+        }
+      } catch (error) {
+        console.error('💥 Auth initialization error:', error);
+        if (mounted) {
+          clearAuthState();
+          setLoading(false);
+          setInitializing(false);
+        }
+      }
+    };
+
+    // Initialize auth
+    initializeAuth();
+
+    // Set up auth state listener - AFTER initial check
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        // Skip if we're still initializing
+        if (initializing) {
+          console.log('🔄 Skipping auth state change during initialization:', event);
+          return;
+        }
+
         console.log(`🔄 Auth state changed: ${event}`);
         
-        if (session?.user) {
+        if (session?.user && mounted) {
           try {
             const userProfile = await fetchUserProfile(session.user.id);
-            if (userProfile) {
+            if (userProfile && mounted) {
               if (!userProfile.is_active) {
                 console.warn('⚠️ User account is inactive');
                 await supabase.auth.signOut();
@@ -96,62 +179,41 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
                   description: "Your account has been deactivated. Please contact administrator.",
                   variant: "destructive",
                 });
-                setUser(null);
-                setUserRole(null);
-                setLoading(false);
-                return;
+                clearAuthState();
+              } else {
+                setAuthState(userProfile, userProfile.role);
+                console.log(`✅ User authenticated: ${userProfile.email} (${userProfile.role})`);
               }
-
-              setUser(userProfile);
-              setUserRole(userProfile.role);
-              setAuthError(null);
-              console.log(`✅ User authenticated: ${userProfile.email} (${userProfile.role})`);
             } else {
               console.error('❌ User profile not found in database');
-              setUser(null);
-              setUserRole(null);
+              clearAuthState();
               setAuthError('Profile not found');
             }
           } catch (error) {
             console.error('💥 Error during auth state change:', error);
             setAuthError('Authentication error');
-            setUser(null);
-            setUserRole(null);
+            clearAuthState();
           }
-          setLoading(false);
         } else {
           console.log('🚪 No user session, clearing state');
-          setUser(null);
-          setUserRole(null);
-          setAuthError(null);
+          if (mounted) {
+            clearAuthState();
+          }
+        }
+
+        if (mounted) {
           setLoading(false);
         }
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('🔍 Initial session check:', session?.user?.email || 'No session');
-      if (session?.user) {
-        fetchUserProfile(session.user.id).then((userProfile) => {
-          if (userProfile) {
-            setUser(userProfile);
-            setUserRole(userProfile.role);
-            setAuthError(null);
-            console.log(`✅ Initial user set: ${userProfile.email} (${userProfile.role})`);
-          }
-          setLoading(false);
-        });
-      } else {
-        setLoading(false);
-      }
-    });
-
     return () => {
+      mounted = false;
+      clearTimeout(loadingTimeout);
       console.log('🧹 Cleaning up auth subscription');
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile, safeToast]);
+  }, [fetchUserProfile, safeToast, clearAuthState, setAuthState, initializing]);
 
   const login = React.useCallback(async (email: string, password: string) => {
     try {
@@ -217,9 +279,7 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
     try {
       console.log('🚪 Logging out...');
       await supabase.auth.signOut();
-      setUser(null);
-      setUserRole(null);
-      setAuthError(null);
+      clearAuthState();
       safeToast({
         title: "Logged out",
         description: "You have been successfully logged out.",
@@ -232,7 +292,7 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
         variant: "destructive",
       });
     }
-  }, [safeToast]);
+  }, [safeToast, clearAuthState]);
 
   const updateProfile = React.useCallback(async (updates: Partial<User>) => {
     if (!user) return;
@@ -269,15 +329,6 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
     updateProfile,
   }), [user, userRole, loading, login, logout, updateProfile]);
 
-  // Don't render error boundary if there's just an auth error
-  if (authError && !user) {
-    return (
-      <AuthContext.Provider value={value}>
-        {children}
-      </AuthContext.Provider>
-    );
-  }
-
   return (
     <AuthContext.Provider value={value}>
       {children}
@@ -291,6 +342,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center p-8">
           <p className="text-muted-foreground">Authentication system error. Please refresh.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors mt-4"
+          >
+            Refresh Page
+          </button>
         </div>
       </div>
     }>
