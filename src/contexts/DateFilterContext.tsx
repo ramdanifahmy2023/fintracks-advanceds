@@ -1,72 +1,104 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { DateRange } from 'react-day-picker';
-import { subDays, startOfMonth, endOfMonth } from 'date-fns';
+import { startOfMonth, endOfMonth, startOfWeek, subDays, subMonths, format } from 'date-fns';
 
-// Mendefinisikan tipe untuk state filter
-interface FilterState {
-  dateRange: DateRange | undefined;
-  setDateRange: (dateRange: DateRange | undefined) => void;
-  setPreset: (preset: string) => void;
-  selectedPreset: string;
+export interface DateRange {
+  from: Date;
+  to: Date;
+  preset?: string;
 }
 
-// Membuat context dengan nilai default
-const DateFilterContext = createContext<FilterState | undefined>(undefined);
-
-// Props untuk provider
-interface DateFilterProviderProps {
-  children: ReactNode;
-}
-
-// Preset tanggal yang bisa dipilih
-const PRESETS = {
-  today: { from: new Date(), to: new Date() },
-  last7days: { from: subDays(new Date(), 6), to: new Date() },
-  last30days: { from: subDays(new Date(), 29), to: new Date() },
-  thisMonth: { from: startOfMonth(new Date()), to: endOfMonth(new Date()) },
-  lastMonth: { 
-    from: startOfMonth(subDays(new Date(), new Date().getDate())), 
-    to: endOfMonth(subDays(new Date(), new Date().getDate())) 
-  },
-};
-
-/**
- * Provider untuk DateFilterContext.
- * Membungkus aplikasi Anda dengan provider ini agar bisa mengakses state filter tanggal.
- * @param {DateFilterProviderProps} props
- */
-export const DateFilterProvider = ({ children }: DateFilterProviderProps) => {
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(PRESETS.last30days);
-  const [selectedPreset, setSelectedPreset] = useState<string>('last30days');
-
-  // Fungsi untuk mengubah preset tanggal
-  const setPreset = (preset: string) => {
-    if (PRESETS[preset as keyof typeof PRESETS]) {
-      setDateRange(PRESETS[preset as keyof typeof PRESETS]);
-      setSelectedPreset(preset);
-    } else {
-        setSelectedPreset('custom');
-    }
+interface DateFilterContextType {
+  dateRange: DateRange;
+  setDateRange: (range: DateRange) => void;
+  presets: {
+    today: () => void;
+    yesterday: () => void;
+    thisWeek: () => void;
+    thisMonth: () => void;
+    lastMonth: () => void;
   };
+  formatDateRange: () => string;
+}
 
-  const value = { dateRange, setDateRange, setPreset, selectedPreset };
+const DateFilterContext = createContext<DateFilterContextType | undefined>(undefined);
 
-  return (
-    <DateFilterContext.Provider value={value}>
-      {children}
-    </DateFilterContext.Provider>
-  );
-};
-
-/**
- * Hook kustom untuk menggunakan DateFilterContext.
- * @returns {FilterState} - State dan fungsi-fungsi dari context.
- * @throws {Error} - Jika digunakan di luar DateFilterProvider.
- */
-export const useDateFilter = (): FilterState => {
+export const useDateFilter = () => {
   const context = useContext(DateFilterContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useDateFilter must be used within a DateFilterProvider');
   }
   return context;
 };
+
+interface DateFilterProviderProps {
+  children: ReactNode;
+}
+
+export function DateFilterProvider({ children }: DateFilterProviderProps) {
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: startOfMonth(new Date()),
+    to: new Date(),
+    preset: 'thisMonth'
+  });
+
+  // Console log whenever dateRange changes
+  const handleSetDateRange = (range: DateRange) => {
+    console.log('🗓️ DateFilter: Range changed:', {
+      from: format(range.from, 'yyyy-MM-dd'),
+      to: format(range.to, 'yyyy-MM-dd'),
+      preset: range.preset,
+      formattedDisplay: `${format(range.from, 'dd MMM yyyy')} - ${format(range.to, 'dd MMM yyyy')}`
+    });
+    setDateRange(range);
+  };
+
+  const presets = {
+    today: () => {
+      const today = new Date();
+      handleSetDateRange({ from: today, to: today, preset: 'today' });
+    },
+    yesterday: () => {
+      const yesterday = subDays(new Date(), 1);
+      handleSetDateRange({ from: yesterday, to: yesterday, preset: 'yesterday' });
+    },
+    thisWeek: () => {
+      handleSetDateRange({ 
+        from: startOfWeek(new Date(), { weekStartsOn: 1 }), 
+        to: new Date(),
+        preset: 'thisWeek'
+      });
+    },
+    thisMonth: () => {
+      handleSetDateRange({ 
+        from: startOfMonth(new Date()), 
+        to: new Date(),
+        preset: 'thisMonth'
+      });
+    },
+    lastMonth: () => {
+      const lastMonth = subMonths(new Date(), 1);
+      handleSetDateRange({ 
+        from: startOfMonth(lastMonth), 
+        to: endOfMonth(lastMonth),
+        preset: 'lastMonth'
+      });
+    }
+  };
+
+  const formatDateRange = () => {
+    return `${format(dateRange.from, 'dd MMM yyyy')} - ${format(dateRange.to, 'dd MMM yyyy')}`;
+  };
+
+  const contextValue: DateFilterContextType = {
+    dateRange,
+    setDateRange: handleSetDateRange,
+    presets,
+    formatDateRange
+  };
+
+  return (
+    <DateFilterContext.Provider value={contextValue}>
+      {children}
+    </DateFilterContext.Provider>
+  );
+}
