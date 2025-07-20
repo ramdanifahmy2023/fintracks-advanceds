@@ -10,13 +10,9 @@ import { DateFilterProvider } from '@/contexts/DateFilterContext';
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/pages/LoginPage";
-import { PWAManager } from "@/components/pwa/PWAManager";
-import ErrorBoundary from "@/components/ErrorBoundary";
-
-// Direct imports - no lazy loading for now to fix loading issues
 import Dashboard from "@/pages/Dashboard";
 import UploadPage from "@/pages/UploadPage";
-import ManualInputPage from "@/pages/ManualInputPage";
+import ManualInputPage from "@/pages/ManualInputPage"; 
 import { AnalyticsPage } from "@/pages/AnalyticsPage";
 import { ProductsPage } from "@/pages/ProductsPage";
 import { StoresPage } from "@/pages/StoresPage";
@@ -24,24 +20,34 @@ import { UsersPage } from "@/pages/UsersPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import UserGuidePage from "@/pages/UserGuidePage";
 import NotFound from "./pages/NotFound";
+import { PWAManager } from "@/components/pwa/PWAManager";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
-// Simple QueryClient configuration - no heavy optimizations
+// Optimized QueryClient configuration for better error handling
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 2 * 60 * 1000, // 2 minutes
-      gcTime: 5 * 60 * 1000, // 5 minutes
-      refetchOnWindowFocus: false,
-      retry: 1,
-      throwOnError: false,
+      staleTime: 5 * 60 * 1000, // Data considered fresh for 5 minutes
+      refetchOnWindowFocus: false, // Don't refetch on window focus
+      retry: 2, // Retry failed queries twice
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+      throwOnError: false, // Don't throw errors, handle them gracefully
     },
     mutations: {
-      retry: 1,
+      retry: 1, // Retry failed mutations once
+      retryDelay: 1000,
     },
   },
 });
 
+// Add global error handler for React Query
+queryClient.setQueryDefaults(['analytics'], {
+  staleTime: 3 * 60 * 1000,
+  retry: 3,
+});
+
 const App = () => {
+  console.log('App: Rendering with optimized QueryClient and error handling');
   
   return (
     <ErrorBoundary fallback={
@@ -71,7 +77,7 @@ const App = () => {
                     {/* Public Routes */}
                     <Route path="/login" element={<LoginPage />} />
                     
-                    {/* Protected Routes - Direct imports, no lazy loading */}
+                    {/* Protected Routes */}
                     <Route path="/" element={
                       <ProtectedRoute>
                         <AppLayout>
