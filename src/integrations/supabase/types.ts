@@ -140,6 +140,77 @@ export type Database = {
           },
         ]
       }
+      budgets: {
+        Row: {
+          amount: number
+          category_id: string | null
+          created_at: string | null
+          end_date: string
+          id: string
+          period: string | null
+          start_date: string
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          category_id?: string | null
+          created_at?: string | null
+          end_date: string
+          id?: string
+          period?: string | null
+          start_date: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          category_id?: string | null
+          created_at?: string | null
+          end_date?: string
+          id?: string
+          period?: string | null
+          start_date?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          icon: string | null
+          id: string
+          name: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       platforms: {
         Row: {
           created_at: string | null
@@ -194,6 +265,36 @@ export type Database = {
           product_name?: string
           sku_reference?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          company_name: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -350,6 +451,45 @@ export type Database = {
             referencedColumns: ["platform_id"]
           },
         ]
+      }
+      transactions: {
+        Row: {
+          amount: number
+          category: string
+          channel: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          transaction_date: string
+          type: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          category: string
+          channel?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          transaction_date: string
+          type: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: string
+          channel?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          transaction_date?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       upload_batches: {
         Row: {
@@ -532,6 +672,28 @@ export type Database = {
         Args: { p_timeframe?: string; p_platform_ids?: string[] }
         Returns: Json
       }
+      get_category_breakdown: {
+        Args: {
+          p_user_id: string
+          p_start_date: string
+          p_end_date: string
+          p_type: string
+        }
+        Returns: Json
+      }
+      get_daily_chart_data: {
+        Args: { p_user_id: string; p_start_date: string; p_end_date: string }
+        Returns: Json
+      }
+      get_dashboard_complete: {
+        Args: {
+          p_start_date: string
+          p_end_date: string
+          p_platform_ids?: string[]
+          p_store_ids?: string[]
+        }
+        Returns: Json
+      }
       get_dashboard_summary: {
         Args: {
           start_date?: string
@@ -554,6 +716,10 @@ export type Database = {
           returned_orders: number
           returned_revenue: number
         }[]
+      }
+      get_financial_summary: {
+        Args: { p_user_id: string; p_start_date: string; p_end_date: string }
+        Returns: Json
       }
       get_platform_performance: {
         Args: { p_timeframe?: string; p_platform_ids?: string[] }

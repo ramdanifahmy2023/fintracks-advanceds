@@ -1,26 +1,23 @@
-import { useState, useCallback, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDateFilter } from '@/contexts/DateFilterContext';
-import { GlobalFilters } from '@/components/dashboard/GlobalFilters';
 import { GlobalDateFilter } from '@/components/dashboard/GlobalDateFilter';
 import { SummaryCards } from '@/components/dashboard/SummaryCards';
-import { RevenueTrendChart } from '@/components/dashboard/charts/RevenueTrendChart';
-import { PlatformChart } from '@/components/dashboard/charts/PlatformChart';
-import { CategoryChart } from '@/components/dashboard/charts/CategoryChart';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, BarChart3, Filter } from 'lucide-react';
-import { FilterState } from '@/types/dashboard';
-import { useDashboardSummary, useChartData, useRecentTransactions, useRealtimeUpdates } from '@/hooks/useDashboard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/lib/formatters';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertTriangle, BarChart3 } from 'lucide-react';
+import { FilterState } from '@/types/dashboard';
+import { supabase } from '@/integrations/supabase/client';
 
 const Dashboard = () => {
   const { user, userRole } = useAuth();
   const { dateRange } = useDateFilter();
+  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [dashboardData, setDashboardData] = useState<any>(null);
   
   const [filters, setFilters] = useState<FilterState>({
     dateRange: {
@@ -34,70 +31,138 @@ const Dashboard = () => {
 
   // Update filters when dateRange from context changes
   useEffect(() => {
-    console.log('📅 Dashboard: DateRange from context changed, updating filters');
     setFilters(prev => ({
       ...prev,
       dateRange
     }));
   }, [dateRange]);
 
-  useRealtimeUpdates();
+  // Simple data fetching without complex optimizations
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('🔍 Fetching dashboard data...');
+      
+      // Simple direct query to get basic data
+      const { data: salesData, error: salesError } = await supabase
+        .from('sales_transactions')
+        .select(`
+          id,
+          order_number,
+          product_name,
+          delivery_status,
+          selling_price,
+          profit,
+          quantity,
+          order_created_at,
+          platforms!inner(platform_name),
+          stores!inner(store_name)
+        `)
+        .gte('order_created_at', filters.dateRange.from.toISOString())
+        .lte('order_created_at', filters.dateRange.to.toISOString())
+        .order('order_created_at', { ascending: false })
+        .limit(100);
 
-  // Log when component mounts and when filters change
+      if (salesError) {
+        console.error('❌ Sales data error:', salesError);
+        throw salesError;
+      }
+
+      console.log('✅ Sales data fetched:', salesData?.length || 0, 'records');
+
+      // Calculate simple summary from the data
+      const summary = {
+        total_orders: salesData?.length || 0,
+        total_packages: salesData?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0,
+        total_revenue: salesData?.reduce((sum, item) => sum + (Number(item.selling_price) || 0), 0) || 0,
+        total_profit: salesData?.reduce((sum, item) => sum + (Number(item.profit) || 0), 0) || 0,
+        completed_orders: salesData?.filter(item => item.delivery_status === 'Selesai').length || 0,
+        completed_revenue: salesData?.filter(item => item.delivery_status === 'Selesai').reduce((sum, item) => sum + (Number(item.selling_price) || 0), 0) || 0,
+        completed_profit: salesData?.filter(item => item.delivery_status === 'Selesai').reduce((sum, item) => sum + (Number(item.profit) || 0), 0) || 0,
+        shipping_orders: salesData?.filter(item => item.delivery_status === 'Sedang Dikirim').length || 0,
+        cancelled_orders: salesData?.filter(item => item.delivery_status === 'Batal').length || 0,
+        returned_orders: salesData?.filter(item => item.delivery_status === 'Return').length || 0,
+      };
+
+      setDashboardData({
+        summary,
+        recent_transactions: salesData?.slice(0, 10) || [],
+        platform_performance: [],
+        revenue_trend: [],
+        top_products: []
+      });
+
+      console.log('✅ Dashboard data processed successfully');
+    } catch (err: any) {
+      console.error('❌ Dashboard fetch error:', err);
+      setError(err.message || 'Terjadi kesalahan saat memuat data');
+    } finally {
+      setLoading(false);
+    }
+  }, [filters.dateRange]);
+
+  // Load data on component mount and filter changes
   useEffect(() => {
-    console.log('📊 Dashboard: Component mounted with filters:', filters);
-  }, []);
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user, fetchDashboardData]);
 
-  useEffect(() => {
-    console.log('📊 Dashboard: Filters changed:', {
-      dateRange: {
-        from: format(filters.dateRange.from, 'yyyy-MM-dd'),
-        to: format(filters.dateRange.to, 'yyyy-MM-dd'),
-        preset: filters.dateRange.preset
-      },
-      platforms: filters.platforms,
-      stores: filters.stores
-    });
-  }, [filters]);
-
-  const { data: summaryData, isLoading: summaryLoading, error: summaryError } = useDashboardSummary(filters);
-  const { data: chartData, isLoading: chartLoading, error: chartError } = useChartData(filters);
-  const { data: recentTransactions, isLoading: transactionsLoading, error: transactionsError } = useRecentTransactions(filters);
-
-  const handleFiltersChange = useCallback((newFilters: FilterState) => {
-    console.log('📊 Dashboard: Platform/Store filters changed:', newFilters);
-    setFilters(newFilters);
-  }, []);
-
-  // Handle chart click interactions
-  const handlePlatformClick = useCallback((platformId: string) => {
-    console.log('📊 Dashboard: Platform clicked:', platformId);
-    setFilters(prev => ({
-      ...prev,
-      platforms: prev.platforms.includes(platformId) 
-        ? prev.platforms.filter(id => id !== platformId)
-        : [...prev.platforms, platformId]
-    }));
-  }, []);
-
-  const handleCategoryClick = useCallback((category: string) => {
-    console.log('📊 Dashboard: Category clicked:', category);
-    // You can implement category filtering logic here
-    // For now, we'll just log it
-  }, []);
-
-  const hasError = summaryError || chartError;
-
-  if (hasError) {
+  // Show error state
+  if (error) {
     return (
       <div className="space-y-6">
         <GlobalDateFilter />
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Terjadi kesalahan saat memuat data dashboard. Silakan refresh halaman atau coba lagi nanti.
+            {error}
+            <br />
+            <button 
+              onClick={fetchDashboardData}
+              className="mt-2 px-3 py-1 bg-destructive text-destructive-foreground rounded text-sm hover:bg-destructive/90"
+            >
+              Coba Lagi
+            </button>
           </AlertDescription>
         </Alert>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="space-y-0">
+        <GlobalDateFilter />
+        <div className="space-y-6 px-4 pb-6">
+          <div className="bg-gradient-hero rounded-2xl p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">Dashboard Analytics</h1>
+                <p className="text-white/80 mb-4">Loading data...</p>
+              </div>
+              <div className="hidden md:block">
+                <BarChart3 className="h-24 w-24 text-white/30" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Array(4).fill(null).map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-6">
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                    <div className="h-8 bg-muted rounded w-1/2"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -131,74 +196,39 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <GlobalFilters 
-          filters={filters} 
-          onFiltersChange={handleFiltersChange}
-          loading={summaryLoading || chartLoading}
-        />
-
         <SummaryCards 
-          data={summaryData} 
-          loading={summaryLoading}
+          data={dashboardData?.summary} 
+          loading={loading}
         />
-
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="platforms">Platform</TabsTrigger>
-            <TabsTrigger value="products">Produk</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="overview" className="space-y-6">
-            <RevenueTrendChart 
-              data={chartData?.revenueTrend || []} 
-              loading={chartLoading} 
-            />
-          </TabsContent>
-          
-          <TabsContent value="platforms" className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <PlatformChart 
-                data={chartData?.platformPerf || []} 
-                loading={chartLoading}
-                onPlatformClick={handlePlatformClick}
-              />
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="products" className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <CategoryChart 
-                data={chartData?.productPerf || []} 
-                loading={chartLoading}
-                onCategoryClick={handleCategoryClick}
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
 
         <Card>
           <CardHeader>
             <CardTitle>Transaksi Terbaru</CardTitle>
             <CardDescription>
-              {filters.platforms.length > 0 || filters.stores.length > 0 ? (
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  <span>Filtered data</span>
-                </div>
-              ) : (
-                'Semua platform dan toko'
-              )}
+              {dashboardData?.recent_transactions?.length || 0} transaksi terbaru
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {transactionsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-muted-foreground">Loading...</div>
+            {dashboardData?.recent_transactions?.length > 0 ? (
+              <div className="space-y-2">
+                {dashboardData.recent_transactions.map((transaction: any) => (
+                  <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <p className="font-medium">{transaction.product_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {transaction.platforms?.platform_name} • {transaction.stores?.store_name}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{Number(transaction.selling_price)?.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })}</p>
+                      <p className="text-sm text-muted-foreground">{transaction.delivery_status}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="text-center text-muted-foreground py-8">
-                Data transaksi tersedia setelah upload data CSV
+                {loading ? 'Loading...' : 'Data transaksi tersedia setelah upload data CSV'}
               </div>
             )}
           </CardContent>
