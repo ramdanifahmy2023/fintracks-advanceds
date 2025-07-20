@@ -1,9 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
-import { useDateFilter } from '@/contexts/DateFilterContext';
 import { GlobalFilters } from '@/components/dashboard/GlobalFilters';
-import { GlobalDateFilter } from '@/components/dashboard/GlobalDateFilter';
 import { SummaryCards } from '@/components/dashboard/SummaryCards';
 import { RevenueTrendChart } from '@/components/dashboard/charts/RevenueTrendChart';
 import { PlatformChart } from '@/components/dashboard/charts/PlatformChart';
@@ -13,14 +11,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, BarChart3 } from 'lucide-react';
 import { FilterState } from '@/types/dashboard';
 import { useDashboardSummary, useChartData, useRecentTransactions, useRealtimeUpdates } from '@/hooks/useDashboard';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/formatters';
 
 const Dashboard = () => {
   const { user, userRole } = useAuth();
-  const { dateRange } = useDateFilter();
   
   const [filters, setFilters] = useState<FilterState>({
     dateRange: {
@@ -31,15 +28,6 @@ const Dashboard = () => {
     platforms: [],
     stores: []
   });
-
-  // Update filters when dateRange from context changes
-  useEffect(() => {
-    console.log('📅 Dashboard: DateRange from context changed, updating filters');
-    setFilters(prev => ({
-      ...prev,
-      dateRange
-    }));
-  }, [dateRange]);
 
   useRealtimeUpdates();
 
@@ -65,7 +53,7 @@ const Dashboard = () => {
   const { data: recentTransactions, isLoading: transactionsLoading, error: transactionsError } = useRecentTransactions(filters);
 
   const handleFiltersChange = useCallback((newFilters: FilterState) => {
-    console.log('📊 Dashboard: Platform/Store filters changed:', newFilters);
+    console.log('📊 Dashboard: All filters changed:', newFilters);
     setFilters(newFilters);
   }, []);
 
@@ -74,7 +62,12 @@ const Dashboard = () => {
   if (hasError) {
     return (
       <div className="space-y-6">
-        <GlobalDateFilter />
+        {/* Only show GlobalFilters - no duplicate */}
+        <GlobalFilters 
+          filters={filters} 
+          onFiltersChange={handleFiltersChange}
+          loading={summaryLoading || chartLoading}
+        />
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
@@ -87,8 +80,12 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-0">
-      {/* Global Date Filter - Sticky at top */}
-      <GlobalDateFilter />
+      {/* Single Filter Component - Sticky at top */}
+      <GlobalFilters 
+        filters={filters} 
+        onFiltersChange={handleFiltersChange}
+        loading={summaryLoading || chartLoading}
+      />
 
       <div className="space-y-6 px-4 pb-6">
         {/* Hero Section */}
@@ -113,12 +110,6 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-
-        <GlobalFilters 
-          filters={filters} 
-          onFiltersChange={handleFiltersChange}
-          loading={summaryLoading || chartLoading}
-        />
 
         <SummaryCards 
           data={summaryData} 
