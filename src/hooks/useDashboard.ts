@@ -1,4 +1,3 @@
-
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { FilterState, DashboardSummary, ChartData } from '@/types/dashboard';
@@ -8,23 +7,53 @@ export const usePlatforms = () => {
   return useQuery({
     queryKey: ['platforms'],
     queryFn: async () => {
-      console.log('🔍 Fetching platforms...');
-      const { data, error } = await supabase
-        .from('platforms')
-        .select('id, platform_name, platform_code, is_active')
-        .eq('is_active', true)
-        .order('platform_name');
+      console.log('🔍 usePlatforms: Starting query...');
       
-      if (error) {
-        console.error('❌ Error fetching platforms:', error);
+      try {
+        const { data, error, count } = await supabase
+          .from('platforms')
+          .select('id, platform_name, platform_code, is_active', { count: 'exact' })
+          .eq('is_active', true)
+          .order('platform_name');
+        
+        if (error) {
+          console.error('❌ usePlatforms: Query error:', error);
+          console.error('❌ usePlatforms: Error details:', {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint
+          });
+          throw error;
+        }
+        
+        console.log('✅ usePlatforms: Query successful');
+        console.log('📊 usePlatforms: Data received:', {
+          count: count,
+          recordsReturned: data?.length || 0,
+          sampleData: data?.slice(0, 3)
+        });
+        
+        // Check for user authentication
+        const { data: { user } } = await supabase.auth.getUser();
+        console.log('👤 usePlatforms: Current user:', {
+          id: user?.id,
+          email: user?.email,
+          authenticated: !!user
+        });
+        
+        return data || [];
+      } catch (error) {
+        console.error('❌ usePlatforms: Unexpected error:', error);
         throw error;
       }
-      
-      console.log('✅ Platforms fetched:', data?.length || 0, 'platforms');
-      console.log('📊 Platform data:', data);
-      return data || [];
     },
     staleTime: 10 * 60 * 1000, // 10 minutes
+    retry: (failureCount, error) => {
+      console.log(`🔄 usePlatforms: Retry attempt ${failureCount + 1}`);
+      return failureCount < 3;
+    },
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };
 
@@ -32,29 +61,73 @@ export const useStores = (platformIds: string[]) => {
   return useQuery({
     queryKey: ['stores', platformIds],
     queryFn: async () => {
-      console.log('🔍 Fetching stores for platforms:', platformIds);
-      let query = supabase
-        .from('stores')
-        .select('id, store_name, store_id_external, platform_id, platforms(platform_name)')
-        .eq('is_active', true);
+      console.log('🔍 useStores: Starting query with platforms:', platformIds);
       
-      if (platformIds.length > 0) {
-        query = query.in('platform_id', platformIds);
-      }
-      
-      const { data, error } = await query.order('store_name');
-      
-      if (error) {
-        console.error('❌ Error fetching stores:', error);
+      try {
+        let query = supabase
+          .from('stores')
+          .select('id, store_name, store_id_external, platform_id, platforms(platform_name)', { count: 'exact' })
+          .eq('is_active', true);
+        
+        if (platformIds.length > 0) {
+          console.log('🔍 useStores: Filtering by platform IDs:', platformIds);
+          query = query.in('platform_id', platformIds);
+        }
+        
+        const { data, error, count } = await query.order('store_name');
+        
+        if (error) {
+          console.error('❌ useStores: Query error:', error);
+          console.error('❌ useStores: Error details:', {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint
+          });
+          throw error;
+        }
+        
+        console.log('✅ useStores: Query successful');
+        console.log('📊 useStores: Data received:', {
+          count: count,
+          recordsReturned: data?.length || 0,
+          platformFilter: platformIds.length > 0 ? platformIds : 'No filter applied',
+          sampleData: data?.slice(0, 3)
+        });
+        
+        // Check for user authentication and permissions
+        const { data: { user } } = await supabase.auth.getUser();
+        console.log('👤 useStores: Current user:', {
+          id: user?.id,
+          email: user?.email,
+          authenticated: !!user
+        });
+        
+        // Test RLS by trying to query without filters
+        const { data: allStores, error: allStoresError, count: allStoresCount } = await supabase
+          .from('stores')
+          .select('*', { count: 'exact' });
+        
+        console.log('🔍 useStores: RLS test (all stores query):', {
+          success: !allStoresError,
+          error: allStoresError?.message,
+          totalInDB: allStoresCount,
+          canAccess: allStores?.length || 0
+        });
+        
+        return data || [];
+      } catch (error) {
+        console.error('❌ useStores: Unexpected error:', error);
         throw error;
       }
-      
-      console.log('✅ Stores fetched:', data?.length || 0, 'stores');
-      console.log('📊 Store data:', data);
-      return data || [];
     },
     staleTime: 10 * 60 * 1000,
     enabled: true, // Always enabled, but filtered by platformIds
+    retry: (failureCount, error) => {
+      console.log(`🔄 useStores: Retry attempt ${failureCount + 1}`);
+      return failureCount < 3;
+    },
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };
 
