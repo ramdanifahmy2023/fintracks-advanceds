@@ -15,10 +15,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/formatters';
-
 const Dashboard = () => {
-  const { user, userRole } = useAuth();
-  
+  const {
+    user,
+    userRole
+  } = useAuth();
   const [filters, setFilters] = useState<FilterState>({
     dateRange: {
       from: startOfMonth(new Date()),
@@ -28,14 +29,12 @@ const Dashboard = () => {
     platforms: [],
     stores: []
   });
-
   useRealtimeUpdates();
 
   // Log when component mounts and when filters change
   useEffect(() => {
     console.log('📊 Dashboard: Component mounted with filters:', filters);
   }, []);
-
   useEffect(() => {
     console.log('📊 Dashboard: Filters changed:', {
       dateRange: {
@@ -47,49 +46,45 @@ const Dashboard = () => {
       stores: filters.stores
     });
   }, [filters]);
-
-  const { data: summaryData, isLoading: summaryLoading, error: summaryError } = useDashboardSummary(filters);
-  const { data: chartData, isLoading: chartLoading, error: chartError } = useChartData(filters);
-  const { data: recentTransactions, isLoading: transactionsLoading, error: transactionsError } = useRecentTransactions(filters);
-
+  const {
+    data: summaryData,
+    isLoading: summaryLoading,
+    error: summaryError
+  } = useDashboardSummary(filters);
+  const {
+    data: chartData,
+    isLoading: chartLoading,
+    error: chartError
+  } = useChartData(filters);
+  const {
+    data: recentTransactions,
+    isLoading: transactionsLoading,
+    error: transactionsError
+  } = useRecentTransactions(filters);
   const handleFiltersChange = useCallback((newFilters: FilterState) => {
     console.log('📊 Dashboard: All filters changed:', newFilters);
     setFilters(newFilters);
   }, []);
-
   const hasError = summaryError || chartError;
-
   if (hasError) {
-    return (
-      <div className="space-y-6">
+    return <div className="space-y-6">
         {/* Only show GlobalFilters - no duplicate */}
-        <GlobalFilters 
-          filters={filters} 
-          onFiltersChange={handleFiltersChange}
-          loading={summaryLoading || chartLoading}
-        />
+        <GlobalFilters filters={filters} onFiltersChange={handleFiltersChange} loading={summaryLoading || chartLoading} />
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             Terjadi kesalahan saat memuat data dashboard. Silakan refresh halaman atau coba lagi nanti.
           </AlertDescription>
         </Alert>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="space-y-0">
+  return <div className="space-y-0">
       {/* Single Filter Component - Sticky at top */}
-      <GlobalFilters 
-        filters={filters} 
-        onFiltersChange={handleFiltersChange}
-        loading={summaryLoading || chartLoading}
-      />
+      <GlobalFilters filters={filters} onFiltersChange={handleFiltersChange} loading={summaryLoading || chartLoading} />
 
       <div className="space-y-6 px-4 pb-6">
         {/* Hero Section */}
-        <div className="bg-gradient-hero rounded-2xl p-6 text-white">
+        <div className="bg-gradient-hero rounded-2xl p-6 text-white my-[10px]">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold mb-2">Dashboard Analytics</h1>
@@ -111,10 +106,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <SummaryCards 
-          data={summaryData} 
-          loading={summaryLoading}
-        />
+        <SummaryCards data={summaryData} loading={summaryLoading} />
 
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
@@ -145,20 +137,14 @@ const Dashboard = () => {
             <CardTitle>Transaksi Terbaru</CardTitle>
           </CardHeader>
           <CardContent>
-            {transactionsLoading ? (
-              <div className="flex items-center justify-center py-8">
+            {transactionsLoading ? <div className="flex items-center justify-center py-8">
                 <div className="text-muted-foreground">Loading...</div>
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground py-8">
+              </div> : <div className="text-center text-muted-foreground py-8">
                 Data transaksi tersedia setelah upload data CSV
-              </div>
-            )}
+              </div>}
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Dashboard;
