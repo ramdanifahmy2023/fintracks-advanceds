@@ -124,7 +124,7 @@ export const GlobalFilters = ({ filters, onFiltersChange, loading }: GlobalFilte
   // Show error state if there are errors
   if (platformsError || storesError) {
     return (
-      <div className="sticky top-16 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
+      <div className="bg-background border-b border-border">
         <div className="mx-4 my-2">
           <Alert variant="destructive" className="border-destructive/50">
             <AlertTriangle className="h-4 w-4" />
@@ -146,7 +146,7 @@ export const GlobalFilters = ({ filters, onFiltersChange, loading }: GlobalFilte
   }
 
   return (
-    <div className="sticky top-16 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
+    <div className="bg-background border-b border-border">
       <Card className="mx-4 my-2 border-0 shadow-sm bg-card/95 backdrop-blur-sm">
         <CardContent className="p-4">
           {/* Compact Header */}
