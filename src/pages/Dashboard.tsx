@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,7 +10,7 @@ import { PlatformChart } from '@/components/dashboard/charts/PlatformChart';
 import { CategoryChart } from '@/components/dashboard/charts/CategoryChart';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, BarChart3 } from 'lucide-react';
+import { AlertTriangle, BarChart3, Filter } from 'lucide-react';
 import { FilterState } from '@/types/dashboard';
 import { useDashboardSummary, useChartData, useRecentTransactions, useRealtimeUpdates } from '@/hooks/useDashboard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -68,6 +67,23 @@ const Dashboard = () => {
   const handleFiltersChange = useCallback((newFilters: FilterState) => {
     console.log('📊 Dashboard: Platform/Store filters changed:', newFilters);
     setFilters(newFilters);
+  }, []);
+
+  // Handle chart click interactions
+  const handlePlatformClick = useCallback((platformId: string) => {
+    console.log('📊 Dashboard: Platform clicked:', platformId);
+    setFilters(prev => ({
+      ...prev,
+      platforms: prev.platforms.includes(platformId) 
+        ? prev.platforms.filter(id => id !== platformId)
+        : [...prev.platforms, platformId]
+    }));
+  }, []);
+
+  const handleCategoryClick = useCallback((category: string) => {
+    console.log('📊 Dashboard: Category clicked:', category);
+    // You can implement category filtering logic here
+    // For now, we'll just log it
   }, []);
 
   const hasError = summaryError || chartError;
@@ -134,18 +150,29 @@ const Dashboard = () => {
           </TabsList>
           
           <TabsContent value="overview" className="space-y-6">
-            <RevenueTrendChart data={chartData?.revenueTrend || []} loading={chartLoading} />
+            <RevenueTrendChart 
+              data={chartData?.revenueTrend || []} 
+              loading={chartLoading} 
+            />
           </TabsContent>
           
           <TabsContent value="platforms" className="space-y-6">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <PlatformChart data={chartData?.platformPerf || []} loading={chartLoading} />
+              <PlatformChart 
+                data={chartData?.platformPerf || []} 
+                loading={chartLoading}
+                onPlatformClick={handlePlatformClick}
+              />
             </div>
           </TabsContent>
           
           <TabsContent value="products" className="space-y-6">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <CategoryChart data={chartData?.productPerf || []} loading={chartLoading} />
+              <CategoryChart 
+                data={chartData?.productPerf || []} 
+                loading={chartLoading}
+                onCategoryClick={handleCategoryClick}
+              />
             </div>
           </TabsContent>
         </Tabs>
@@ -153,6 +180,16 @@ const Dashboard = () => {
         <Card>
           <CardHeader>
             <CardTitle>Transaksi Terbaru</CardTitle>
+            <CardDescription>
+              {filters.platforms.length > 0 || filters.stores.length > 0 ? (
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  <span>Filtered data</span>
+                </div>
+              ) : (
+                'Semua platform dan toko'
+              )}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {transactionsLoading ? (
