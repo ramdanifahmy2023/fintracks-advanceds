@@ -226,22 +226,22 @@ export const ManualInputForm = ({
                   <SelectValue placeholder="Pilih store" />
                 </SelectTrigger>
                 <SelectContent>
-                    {storesLoading ? (
-                      <SelectItem value="loading" disabled>
-                        Memuat store...
+                  {storesLoading ? (
+                    <SelectItem value="loading" disabled>
+                      Memuat store...
+                    </SelectItem>
+                  ) : stores.length === 0 ? (
+                    <SelectItem value="no-stores" disabled>
+                      Store tidak tersedia
+                    </SelectItem>
+                  ) : (
+                    stores.map((store) => (
+                      <SelectItem key={store.id} value={store.id}>
+                        {store.store_name}
                       </SelectItem>
-                    ) : stores.length === 0 ? (
-                      <SelectItem value="no-stores" disabled>
-                        Store tidak tersedia
-                      </SelectItem>
-                    ) : (
-                      stores.map((store) => (
-                        <SelectItem key={store.id} value={store.id}>
-                          {store.store_name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
+                    ))
+                  )}
+                </SelectContent>
               </Select>
               {errors.store_id && (
                 <p className="text-sm text-destructive">{errors.store_id.message}</p>
