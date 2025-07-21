@@ -11,44 +11,20 @@ export const useAnalyticsKPI = (timeframe: string, platforms: string[]) => {
       try {
         // For now, using mock data but with proper error handling
         // TODO: Replace with actual database queries
-        const mockData = {
-          totalRevenue: 85000000,
-          totalProfit: 25500000,
-          profitMargin: 30.0,
-          totalTransactions: 1250,
-          avgOrderValue: 68000,
-          topPlatform: 'Shopee',
-          growthRate: 8.9,
-          revenueChange: 8.9,
-          revenueTrend: 'up' as const,
-          profitChange: 15.9,
-          profitTrend: 'up' as const,
-          aovChange: 2.9,
-          aovTrend: 'up' as const,
-          topPlatformChange: 5.2,
-          topPlatformTrend: 'up' as const,
-          growthRateChange: 1.2,
-          growthRateTrend: 'up' as const,
-          topProduct: {
-            name: 'Kaos Kaki Wudhu Premium',
-            units: 234,
-            revenue: 5850000
-          },
-          topProductChange: 12.5,
-          topProductTrend: 'up' as const
-        };
-        
-        console.log('✅ Analytics KPI data fetched successfully');
-        return mockData;
-      } catch (error) {
-        console.error('❌ Error fetching analytics KPI:', error);
-        throw new Error('Failed to fetch analytics KPI data');
-      }
-    },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    retry: 2,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+        const { data, error } = await supabase
+        .from('v_dashboard_summary')
+        .select('*')
+        .gte('created_at', getDateRangeStart(timeframe))
+        .lte('created_at', new Date().toISOString());
+      
+      if (error) throw error;
+      
+      return {
+        totalRevenue: data?.[0]?.total_revenue || 0,
+        totalProfit: data?.[0]?.total_profit || 0,
+        // ... hitung dari data real
+      };
+    }
   });
 };
 
