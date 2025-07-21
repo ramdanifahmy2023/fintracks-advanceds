@@ -116,6 +116,11 @@ export const useAnalyticsKPI = (timeframe: string, platforms: string[]) => {
           console.log('⚠️ Warning: Could not fetch previous period data for comparison');
         }
 
+        console.log('📊 Previous transactions found:', {
+          count: prevTransactions?.length || 0,
+          dateRange: `${prevStartDate.toISOString().split('T')[0]} to ${prevEndDate.toISOString().split('T')[0]}`
+        });
+
         // Calculate current period metrics
         const current = {
           total_revenue: currentTransactions?.reduce((sum, t) => sum + Number(t.selling_price || 0), 0) || 0,
@@ -137,7 +142,7 @@ export const useAnalyticsKPI = (timeframe: string, platforms: string[]) => {
         };
 
         // Get top platform
-        const { data: topPlatformData } = await supabase
+        const { data: topPlatformData, error: topPlatformError } = await supabase
           .from('sales_transactions')
           .select(`
             platform_id,
@@ -147,22 +152,30 @@ export const useAnalyticsKPI = (timeframe: string, platforms: string[]) => {
           .gte('order_created_at', startDate)
           .lte('order_created_at', endDate);
 
+        if (topPlatformError) {
+          console.log('⚠️ Warning: Could not fetch top platform data');
+        }
+
         const platformSums = topPlatformData?.reduce((acc: any, transaction: any) => {
           const platform = transaction.platforms?.platform_name || 'Unknown';
           acc[platform] = (acc[platform] || 0) + Number(transaction.selling_price || 0);
           return acc;
         }, {}) || {};
 
-        const topPlatform = Object.keys(platformSums).reduce((a, b) => 
-          platformSums[a] > platformSums[b] ? a : b, 'N/A'
-        );
+        const topPlatform = Object.keys(platformSums).length > 0 
+          ? Object.keys(platformSums).reduce((a, b) => platformSums[a] > platformSums[b] ? a : b)
+          : 'No Data';
 
         // Get top product
-        const { data: topProductData } = await supabase
+        const { data: topProductData, error: topProductError } = await supabase
           .from('sales_transactions')
           .select('product_name, selling_price, quantity')
           .gte('order_created_at', startDate)
           .lte('order_created_at', endDate);
+
+        if (topProductError) {
+          console.log('⚠️ Warning: Could not fetch top product data');
+        }
 
         const productSums = topProductData?.reduce((acc: any, transaction: any) => {
           const product = transaction.product_name || 'Unknown';
@@ -174,9 +187,9 @@ export const useAnalyticsKPI = (timeframe: string, platforms: string[]) => {
           return acc;
         }, {}) || {};
 
-        const topProductName = Object.keys(productSums).reduce((a, b) => 
-          productSums[a].revenue > productSums[b].revenue ? a : b, 'N/A'
-        );
+        const topProductName = Object.keys(productSums).length > 0
+          ? Object.keys(productSums).reduce((a, b) => productSums[a].revenue > productSums[b].revenue ? a : b)
+          : 'No Data';
 
         const topProduct = {
           name: topProductName,
