@@ -1,49 +1,54 @@
-
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format } from 'date-fns';
-import { Calendar, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
-import { usePlatforms } from '@/hooks/usePlatforms';
-import { useStores } from '@/hooks/useStores';
+import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { usePlatforms, useStores } from '@/hooks/useDashboard';
 import { useCreateAdExpense } from '@/hooks/useAdExpenses';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
-const formSchema = z.object({
+// Skema validasi menggunakan Zod untuk memastikan data yang diinput benar
+const adExpenseSchema = z.object({
   expense_date: z.date({
-    required_error: 'Tanggal iklan harus diisi',
+    required_error: 'Tanggal iklan harus diisi.',
   }),
-  platform_id: z.string({
-    required_error: 'Platform harus dipilih',
-  }),
+  platform_id: z.string().min(1, 'Platform harus dipilih.'),
   store_id: z.string().optional(),
-  amount: z.number({
-    required_error: 'Biaya iklan harus diisi',
-  }).min(0, 'Biaya iklan tidak boleh negatif'),
+  amount: z.preprocess(
+    (val) => (typeof val === 'string' ? parseInt(val.replace(/[^0-9]/g, ''), 10) : val),
+    z.number().min(1, 'Biaya iklan harus lebih dari 0.')
+  ),
   notes: z.string().optional(),
 });
 
-type FormData = z.infer<typeof formSchema>;
+type AdExpenseFormValues = z.infer<typeof adExpenseSchema>;
 
 export const AdExpenseForm = () => {
+  const { user } = useAuth();
+  const { data: platforms = [], isLoading: platformsLoading } = usePlatforms();
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
-  const [amountInput, setAmountInput] = useState<string>('');
-  
-  const { data: platforms, isLoading: isLoadingPlatforms } = usePlatforms();
-  const { data: stores, isLoading: isLoadingStores } = useStores(selectedPlatform);
+  const { data: stores = [], isLoading: storesLoading } = useStores(selectedPlatform ? [selectedPlatform] : []);
+
   const createAdExpense = useCreateAdExpense();
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+  const {
+    handleSubmit,
+    control,
+    formState: { errors },
+    reset,
+    watch,
+  } = useForm<AdExpenseFormValues>({
+    resolver: zodResolver(adExpenseSchema),
     defaultValues: {
       expense_date: new Date(),
       platform_id: '',
@@ -53,223 +58,191 @@ export const AdExpenseForm = () => {
     },
   });
 
-  const formatCurrency = (value: string) => {
-    // Remove all non-digit characters
-    const numericValue = value.replace(/\D/g, '');
-    
-    // Format as currency
-    if (numericValue === '') return '';
-    
-    const number = parseInt(numericValue);
-    return new Intl.NumberFormat('id-ID').format(number);
-  };
+  const platformId = watch('platform_id');
 
-  const handleAmountChange = (value: string) => {
-    const numericValue = value.replace(/\D/g, '');
-    setAmountInput(formatCurrency(value));
-    
-    if (numericValue) {
-      form.setValue('amount', parseInt(numericValue));
-    } else {
-      form.setValue('amount', 0);
+  const onSubmit = async (data: AdExpenseFormValues) => {
+    if (!user) {
+      toast.error('Anda harus login untuk menambahkan data.');
+      return;
     }
-  };
 
-  const onSubmit = async (data: FormData) => {
-    try {
-      await createAdExpense.mutateAsync({
-        expense_date: format(data.expense_date, 'yyyy-MM-dd'),
-        platform_id: data.platform_id,
-        store_id: data.store_id || undefined,
-        amount: data.amount,
-        notes: data.notes || undefined,
-      });
-      
-      // Reset form
-      form.reset();
-      setAmountInput('');
-      setSelectedPlatform('');
-    } catch (error) {
-      console.error('Error submitting form:', error);
-    }
+    await createAdExpense.mutateAsync({
+      ...data,
+      created_by: user.id,
+      store_id: data.store_id || null, // Pastikan mengirim null jika kosong
+    }, {
+      onSuccess: () => {
+        toast.success('Biaya iklan berhasil ditambahkan!');
+        reset({
+          expense_date: new Date(),
+          platform_id: '',
+          store_id: '',
+          amount: 0,
+          notes: ''
+        });
+        setSelectedPlatform('');
+      },
+      onError: (error) => {
+        toast.error(`Gagal menyimpan: ${error.message}`);
+      }
+    });
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>Tambah Biaya Iklan</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        {/* Kolom Kiri */}
+        <div className="space-y-4">
+          {/* Tanggal Iklan */}
+          <div>
+            <Label htmlFor="expense_date">Tanggal Iklan *</Label>
+            <Controller
               name="expense_date"
+              control={control}
               render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Tanggal Iklan</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            'w-full pl-3 text-left font-normal',
-                            !field.value && 'text-muted-foreground'
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, 'PPP')
-                          ) : (
-                            <span>Pilih tanggal</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                          date > new Date() || date < new Date('1900-01-01')
-                        }
-                        initialFocus
-                        className="pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="platform_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Pilih Platform</FormLabel>
-                  <Select
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      setSelectedPlatform(value);
-                      form.setValue('store_id', '');
-                    }}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih platform" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {isLoadingPlatforms ? (
-                        <SelectItem value="loading" disabled>
-                          Loading...
-                        </SelectItem>
-                      ) : (
-                        platforms?.map((platform) => (
-                          <SelectItem key={platform.id} value={platform.id}>
-                            {platform.platform_name}
-                          </SelectItem>
-                        ))
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !field.value && "text-muted-foreground",
+                        errors.expense_date && "border-destructive"
                       )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="store_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Pilih Toko (Opsional)</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={!selectedPlatform}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih toko" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {isLoadingStores ? (
-                        <SelectItem value="loading" disabled>
-                          Loading...
-                        </SelectItem>
-                      ) : (
-                        stores?.map((store) => (
-                          <SelectItem key={store.id} value={store.id}>
-                            {store.store_name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Biaya Iklan</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                        Rp
-                      </span>
-                      <Input
-                        placeholder="0"
-                        value={amountInput}
-                        onChange={(e) => handleAmountChange(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Keterangan</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Masukkan keterangan biaya iklan..."
-                      className="resize-none"
-                      {...field}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {field.value ? format(field.value, "PPP") : <span>Pilih tanggal</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      initialFocus
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                  </PopoverContent>
+                </Popover>
               )}
             />
+            {errors.expense_date && <p className="text-sm text-destructive mt-1">{errors.expense_date.message}</p>}
+          </div>
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={createAdExpense.isPending}
-            >
-              {createAdExpense.isPending ? 'Menyimpan...' : 'Simpan Biaya Iklan'}
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+          {/* Pilih Platform */}
+          <div>
+            <Label htmlFor="platform_id">Pilih Platform *</Label>
+            <Controller
+              name="platform_id"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    setSelectedPlatform(value);
+                  }}
+                  value={field.value}
+                  disabled={platformsLoading}
+                >
+                  <SelectTrigger className={cn(errors.platform_id && "border-destructive")}>
+                    <SelectValue placeholder="Pilih platform..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {platforms.map((platform) => (
+                      <SelectItem key={platform.id} value={platform.id}>
+                        {platform.platform_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.platform_id && <p className="text-sm text-destructive mt-1">{errors.platform_id.message}</p>}
+          </div>
+
+          {/* Pilih Toko (Opsional) */}
+          <div>
+            <Label htmlFor="store_id">Pilih Toko (Opsional)</Label>
+            <Controller
+              name="store_id"
+              control={control}
+              render={({ field }) => (
+                 <Select
+                  onValueChange={field.onChange}
+                  value={field.value}
+                  disabled={!platformId || storesLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih toko jika ada..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {stores.map((store) => (
+                      <SelectItem key={store.id} value={store.id}>
+                        {store.store_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+        </div>
+
+        {/* Kolom Kanan */}
+        <div className="space-y-4">
+          {/* Biaya Iklan */}
+          <div>
+            <Label htmlFor="amount">Biaya Iklan *</Label>
+            <Controller
+                name="amount"
+                control={control}
+                render={({ field: { onChange, value, ...rest } }) => (
+                    <Input
+                        {...rest}
+                        placeholder="Rp 100.000"
+                        onChange={(e) => {
+                            const rawValue = e.target.value.replace(/[^0-9]/g, '');
+                            const numberValue = parseInt(rawValue, 10);
+                            
+                            if (!isNaN(numberValue)) {
+                                onChange(numberValue); // Simpan sebagai angka
+                            } else {
+                                onChange(0);
+                            }
+                        }}
+                        // Tampilkan nilai yang diformat
+                        value={new Intl.NumberFormat('id-ID', {
+                            style: 'currency',
+                            currency: 'IDR',
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                        }).format(value || 0)}
+                        className={cn(errors.amount && "border-destructive")}
+                    />
+                )}
+            />
+            {errors.amount && <p className="text-sm text-destructive mt-1">{errors.amount.message}</p>}
+          </div>
+
+          {/* Keterangan */}
+          <div>
+            <Label htmlFor="notes">Keterangan</Label>
+            <Textarea
+              {...register('notes')}
+              placeholder="Contoh: Iklan produk gamis di Shopee Live"
+              className="min-h-[128px]"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Tombol Aksi */}
+      <div className="flex justify-end pt-4">
+        <Button type="submit" disabled={createAdExpense.isPending}>
+          {createAdExpense.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Simpan Biaya Iklan
+        </Button>
+      </div>
+    </form>
   );
 };
