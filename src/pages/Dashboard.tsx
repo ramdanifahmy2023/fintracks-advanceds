@@ -139,84 +139,54 @@ const Dashboard = () => {
             </div>
           </TabsContent>
         </Tabs>
-<Card>
-  <CardHeader>
-    <CardTitle>Transaksi Terbaru</CardTitle>
-  </CardHeader>
-  <CardContent>
-    {transactionsLoading ? (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-muted-foreground">Loading...</div>
+
+        {/* Recent Transactions - FIXED VERSION */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Transaksi Terbaru</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {transactionsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-muted-foreground">Loading...</div>
+              </div>
+            ) : recentTransactions && recentTransactions.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order Number</TableHead>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Platform</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentTransactions.map((transaction) => (
+                    <TableRow key={transaction.id}>
+                      <TableCell className="font-medium">{transaction.order_number}</TableCell>
+                      <TableCell>{transaction.product_name}</TableCell>
+                      <TableCell>{transaction.platforms?.platform_name || 'N/A'}</TableCell>
+                      <TableCell>{formatCurrency(transaction.selling_price)}</TableCell>
+                      <TableCell>
+                        <Badge variant={transaction.delivery_status === 'Selesai' ? 'default' : 'secondary'}>
+                          {transaction.delivery_status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                Belum ada transaksi dalam periode ini. Coba ubah filter tanggal.
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-    ) : recentTransactions && recentTransactions.length > 0 ? (
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Order Number</TableHead>
-            <TableHead>Product</TableHead>
-            <TableHead>Platform</TableHead>
-            <TableHead>Amount</TableHead>
-            <TableHead>Status</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {recentTransactions.map((transaction) => (
-            <TableRow key={transaction.id}>
-              <TableCell className="font-medium">{transaction.order_number}</TableCell>
-              <TableCell>{transaction.product_name}</TableCell>
-              <TableCell>{transaction.platforms?.platform_name || 'N/A'}</TableCell>
-              <TableCell>{formatCurrency(transaction.selling_price)}</TableCell>
-              <TableCell>
-                <Badge variant={transaction.delivery_status === 'Selesai' ? 'default' : 'secondary'}>
-                  {transaction.delivery_status}
-                </Badge>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    ) : (
-      <div className="text-center text-muted-foreground py-8">
-        Belum ada transaksi dalam periode ini. Coba ubah filter tanggal.
-      </div>
-    )}
-  </CardContent>
-</Card>
-{transactionsLoading ? (
-  <div className="flex items-center justify-center py-8">
-    <div className="text-muted-foreground">Loading...</div>
-  </div>
-) : recentTransactions && recentTransactions.length > 0 ? (
-  <Table>
-    <TableHeader>
-      <TableRow>
-        <TableHead>Order Number</TableHead>
-        <TableHead>Product</TableHead>
-        <TableHead>Platform</TableHead>
-        <TableHead>Amount</TableHead>
-        <TableHead>Status</TableHead>
-      </TableRow>
-    </TableHeader>
-    <TableBody>
-      {recentTransactions.map((transaction) => (
-        <TableRow key={transaction.id}>
-          <TableCell className="font-medium">{transaction.order_number}</TableCell>
-          <TableCell>{transaction.product_name}</TableCell>
-          <TableCell>{transaction.platforms?.platform_name || 'N/A'}</TableCell>
-          <TableCell>{formatCurrency(transaction.selling_price)}</TableCell>
-          <TableCell>
-            <Badge variant={transaction.delivery_status === 'Selesai' ? 'default' : 'secondary'}>
-              {transaction.delivery_status}
-            </Badge>
-          </TableCell>
-        </TableRow>
-      ))}
-    </TableBody>
-  </Table>
-) : (
-  <div className="text-center text-muted-foreground py-8">
-    Belum ada transaksi dalam periode ini. Coba ubah filter tanggal atau upload data CSV.
-  </div>
-)}
+    </div>
+  );
+};
 
 export default Dashboard;
