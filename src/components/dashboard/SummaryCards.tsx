@@ -44,9 +44,9 @@ export const SummaryCards = ({ data, loading }: SummaryCardsProps) => {
         value: formatCurrency(Number(data.completed_revenue) || 0),
         subtitle: 'Penjualan selesai',
         change: {
-          value: 15.2, // This would come from period comparison
-          type: 'increase' as const,
-          period: 'vs bulan lalu'
+          value: data.changes?.completed_revenue || 0,
+          type: (data.changes?.completed_revenue || 0) > 0 ? 'increase' : 'decrease',
+          period: 'vs periode lalu'
         },
         icon: DollarSign,
         color: 'green' as const
@@ -56,8 +56,8 @@ export const SummaryCards = ({ data, loading }: SummaryCardsProps) => {
         value: `${formatNumber(Number(data.total_packages) || 0)} paket`,
         subtitle: 'Kuantitas terjual',
         change: {
-          value: 8.7,
-          type: 'increase' as const,
+          value: data.changes?.total_packages || 0,
+          type: (data.changes?.total_packages || 0) > 0 ? 'increase' : 'decrease',
           period: 'vs periode lalu'
         },
         icon: Package,
@@ -68,9 +68,9 @@ export const SummaryCards = ({ data, loading }: SummaryCardsProps) => {
         value: formatCurrency(Number(data.completed_profit) || 0),
         subtitle: 'Setelah potong biaya',
         change: {
-          value: -2.1,
-          type: 'decrease' as const,
-          period: 'vs bulan lalu'
+          value: data.changes?.completed_profit || 0,
+          type: (data.changes?.completed_profit || 0) > 0 ? 'increase' : 'decrease',
+          period: 'vs periode lalu'
         },
         icon: TrendingUp,
         color: 'purple' as const
@@ -80,8 +80,8 @@ export const SummaryCards = ({ data, loading }: SummaryCardsProps) => {
         value: formatPercentage(completionRate),
         subtitle: 'Pesanan berhasil',
         change: {
-          value: 1.5,
-          type: 'increase' as const,
+          value: data.changes?.completion_rate || 0,
+          type: (data.changes?.completion_rate || 0) > 0 ? 'increase' : 'decrease',
           period: 'completion rate'
         },
         icon: CheckCircle,
@@ -113,8 +113,8 @@ export const SummaryCards = ({ data, loading }: SummaryCardsProps) => {
         value: formatCurrency(avgOrderValue),
         subtitle: 'Per transaksi',
         change: {
-          value: 12.3,
-          type: 'increase' as const,
+          value: data.changes?.avg_order_value || 0,
+          type: (data.changes?.avg_order_value || 0) > 0 ? 'increase' : 'decrease',
           period: 'average value'
         },
         icon: Calculator,
