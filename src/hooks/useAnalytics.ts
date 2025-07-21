@@ -37,13 +37,7 @@ export const useAnalyticsKPI = (timeframe: string, platforms: string[]) => {
         const startDate = getDateRangeStart(timeframe);
         const endDate = new Date().toISOString().split('T')[0];
 
-        // Build platform filter for queries
-        let platformFilter = '';
-        if (platforms && platforms.length > 0) {
-          platformFilter = `Platform filter: ${platforms.length} selected`;
-        }
-
-        // Get current period data
+        // Get current period data - DIRECT QUERY NO RPC
         let currentQuery = supabase
           .from('sales_transactions')
           .select('selling_price, profit, quantity, order_created_at')
@@ -62,7 +56,7 @@ export const useAnalyticsKPI = (timeframe: string, platforms: string[]) => {
           throw currentError;
         }
 
-        // Get previous period for comparison
+        // Get previous period for comparison - DIRECT QUERY NO RPC
         const prevStartDate = new Date(new Date(startDate).getTime() - (new Date(endDate).getTime() - new Date(startDate).getTime()));
         const prevEndDate = new Date(startDate);
         
