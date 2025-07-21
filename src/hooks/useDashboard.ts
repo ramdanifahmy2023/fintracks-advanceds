@@ -106,104 +106,97 @@ export const useDashboardSummary = (filters: FilterState) => {
       });
       
       try {
-        const startDate = filters.dateRange.from.toISOString().split('T')[0];
-        const endDate = filters.dateRange.to.toISOString().split('T')[0];
+        const { from, to } = filters.dateRange;
+        const diff = to.getTime() - from.getTime();
 
-        // Expand date range to capture more data (same logic as Analytics)
-        const expandedStartDate = new Date(filters.dateRange.from.getTime() - (90 * 24 * 60 * 60 * 1000));
-        const expandedStart = expandedStartDate.toISOString().split('T')[0];
+        const currentStartDate = from.toISOString().split('T')[0];
+        const currentEndDate = to.toISOString().split('T')[0];
 
-        console.log('📅 Dashboard date range:', {
-          original: `${startDate} to ${endDate}`,
-          expanded: `${expandedStart} to ${endDate}`
-        });
+        const prevStartDate = new Date(from.getTime() - diff).toISOString().split('T')[0];
+        const prevEndDate = currentStartDate;
 
-        // Get transactions data with expanded date range
-        let query = supabase
-          .from('sales_transactions')
-          .select(`
-            selling_price,
-            profit,
-            quantity,
-            delivery_status,
-            order_created_at,
-            platforms!inner(platform_name),
-            stores!inner(store_name)
-          `)
-          .gte('order_created_at', expandedStart)
-          .lte('order_created_at', endDate);
+        const fetchDataForPeriod = async (start: string, end: string) => {
+          let query = supabase
+            .from('sales_transactions')
+            .select('selling_price, profit, quantity, delivery_status')
+            .gte('order_created_at', start)
+            .lte('order_created_at', end);
 
-        // Apply platform filter
-        if (filters.platforms.length > 0) {
-          query = query.in('platform_id', filters.platforms);
-        }
-
-        // Apply store filter
-        if (filters.stores.length > 0) {
-          query = query.in('store_id', filters.stores);
-        }
-
-        const { data: transactions, error } = await query;
-
-        if (error) {
-          console.error('❌ useDashboardSummary: Error:', error);
-          throw error;
-        }
-
-        console.log('📊 Dashboard transactions found:', {
-          total: transactions?.length || 0,
-          sample: transactions?.[0]
-        });
-
-        // If no data found, return zero values
-        if (!transactions || transactions.length === 0) {
-          console.log('⚠️ No transactions found, returning zero summary');
-          return {
-            total_orders: 0,
-            total_packages: 0,
-            total_revenue: 0,
-            total_profit: 0,
-            completed_orders: 0,
-            completed_revenue: 0,
-            completed_profit: 0,
-            shipping_orders: 0,
-            shipping_revenue: 0,
-            cancelled_orders: 0,
-            cancelled_revenue: 0,
-            returned_orders: 0,
-            returned_revenue: 0
-          };
-        }
-
-        // Calculate summary metrics
-        const summary = {
-          total_orders: transactions.length,
-          total_packages: transactions.reduce((sum, t) => sum + Number(t.quantity || 0), 0),
-          total_revenue: transactions.reduce((sum, t) => sum + Number(t.selling_price || 0), 0),
-          total_profit: transactions.reduce((sum, t) => sum + Number(t.profit || 0), 0),
-          completed_orders: transactions.filter(t => t.delivery_status === 'Selesai').length,
-          completed_revenue: transactions
-            .filter(t => t.delivery_status === 'Selesai')
-            .reduce((sum, t) => sum + Number(t.selling_price || 0), 0),
-          completed_profit: transactions
-            .filter(t => t.delivery_status === 'Selesai')
-            .reduce((sum, t) => sum + Number(t.profit || 0), 0),
-          shipping_orders: transactions.filter(t => t.delivery_status === 'Sedang Dikirim').length,
-          shipping_revenue: transactions
-            .filter(t => t.delivery_status === 'Sedang Dikirim')
-            .reduce((sum, t) => sum + Number(t.selling_price || 0), 0),
-          cancelled_orders: transactions.filter(t => t.delivery_status === 'Batal').length,
-          cancelled_revenue: transactions
-            .filter(t => t.delivery_status === 'Batal')
-            .reduce((sum, t) => sum + Number(t.selling_price || 0), 0),
-          returned_orders: transactions.filter(t => t.delivery_status === 'Return').length,
-          returned_revenue: transactions
-            .filter(t => t.delivery_status === 'Return')
-            .reduce((sum, t) => sum + Number(t.selling_price || 0), 0)
+          if (filters.platforms.length > 0) {
+            query = query.in('platform_id', filters.platforms);
+          }
+          if (filters.stores.length > 0) {
+            query = query.in('store_id', filters.stores);
+          }
+          const { data, error } = await query;
+          if (error) throw error;
+          return data || [];
         };
 
-        console.log('✅ Dashboard summary calculated:', summary);
-        return summary as DashboardSummary;
+        const [currentTransactions, prevTransactions] = await Promise.all([
+          fetchDataForPeriod(currentStartDate, currentEndDate),
+          fetchDataForPeriod(prevStartDate, prevEndDate)
+        ]);
+        
+        const calculateMetrics = (transactions: any[]) => {
+          if (!transactions || transactions.length === 0) {
+            return {
+              total_orders: 0,
+              total_packages: 0,
+              total_revenue: 0,
+              total_profit: 0,
+              completed_orders: 0,
+              completed_revenue: 0,
+              completed_profit: 0,
+              shipping_orders: 0,
+              cancelled_orders: 0,
+              returned_orders: 0,
+            };
+          }
+          return {
+            total_orders: transactions.length,
+            total_packages: transactions.reduce((sum, t) => sum + Number(t.quantity || 0), 0),
+            total_revenue: transactions.reduce((sum, t) => sum + Number(t.selling_price || 0), 0),
+            total_profit: transactions.reduce((sum, t) => sum + Number(t.profit || 0), 0),
+            completed_orders: transactions.filter(t => t.delivery_status === 'Selesai').length,
+            completed_revenue: transactions.filter(t => t.delivery_status === 'Selesai').reduce((sum, t) => sum + Number(t.selling_price || 0), 0),
+            completed_profit: transactions.filter(t => t.delivery_status === 'Selesai').reduce((sum, t) => sum + Number(t.profit || 0), 0),
+            shipping_orders: transactions.filter(t => t.delivery_status === 'Sedang Dikirim').length,
+            cancelled_orders: transactions.filter(t => t.delivery_status === 'Batal').length,
+            returned_orders: transactions.filter(t => t.delivery_status === 'Return').length,
+          };
+        };
+
+        const currentMetrics = calculateMetrics(currentTransactions);
+        const prevMetrics = calculateMetrics(prevTransactions);
+
+        const calculateChange = (current: number, previous: number) => {
+          if (previous === 0) return current > 0 ? 100 : 0;
+          return ((current - previous) / previous) * 100;
+        };
+
+        const summary: DashboardSummary = {
+          ...currentMetrics,
+          shipping_revenue: 0, // Placeholder, adjust as needed
+          cancelled_revenue: 0,
+          returned_revenue: 0,
+          changes: {
+            completed_revenue: calculateChange(currentMetrics.completed_revenue, prevMetrics.completed_revenue),
+            total_packages: calculateChange(currentMetrics.total_packages, prevMetrics.total_packages),
+            completed_profit: calculateChange(currentMetrics.completed_profit, prevMetrics.completed_profit),
+            completion_rate: calculateChange(
+              currentMetrics.total_orders > 0 ? currentMetrics.completed_orders / currentMetrics.total_orders : 0,
+              prevMetrics.total_orders > 0 ? prevMetrics.completed_orders / prevMetrics.total_orders : 0,
+            ),
+            avg_order_value: calculateChange(
+              currentMetrics.completed_orders > 0 ? currentMetrics.completed_revenue / currentMetrics.completed_orders : 0,
+              prevMetrics.completed_orders > 0 ? prevMetrics.completed_revenue / prevMetrics.completed_orders : 0,
+            )
+          }
+        };
+
+        console.log('✅ Dashboard summary with changes calculated:', summary);
+        return summary;
       } catch (error) {
         console.error('❌ useDashboardSummary: Unexpected error:', error);
         throw error;
