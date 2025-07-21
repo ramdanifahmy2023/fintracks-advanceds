@@ -3,13 +3,15 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { LayoutDashboard, Upload, PlusCircle, BarChart3, Package, Store, Users, Settings, BookOpen, X } from 'lucide-react';
+import { LayoutDashboard, Upload, PlusCircle, BarChart3, Package, Store, Users, Settings, BookOpen, X, DollarSign } from 'lucide-react';
 import { NavigationItem } from '@/types/auth';
+
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   userRole: string;
 }
+
 const navigationItems: Record<string, NavigationItem[]> = {
   super_admin: [{
     icon: LayoutDashboard,
@@ -23,6 +25,10 @@ const navigationItems: Record<string, NavigationItem[]> = {
     icon: PlusCircle,
     label: 'Input Manual',
     path: '/manual-input'
+  }, { // <-- Item baru ditambahkan di sini
+    icon: DollarSign,
+    label: 'Biaya Iklan',
+    path: '/ad-expenses'
   }, {
     icon: BarChart3,
     label: 'Analytics',
@@ -60,6 +66,10 @@ const navigationItems: Record<string, NavigationItem[]> = {
     icon: PlusCircle,
     label: 'Input Manual',
     path: '/manual-input'
+  }, { // <-- Item baru ditambahkan di sini
+    icon: DollarSign,
+    label: 'Biaya Iklan',
+    path: '/ad-expenses'
   }, {
     icon: BarChart3,
     label: 'Analytics',
@@ -104,6 +114,7 @@ const navigationItems: Record<string, NavigationItem[]> = {
     path: '/help'
   }]
 };
+
 export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onClose,
