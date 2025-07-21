@@ -10,13 +10,14 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/pages/LoginPage";
 import Dashboard from "@/pages/Dashboard";
 import UploadPage from "@/pages/UploadPage";
-import ManualInputPage from "@/pages/ManualInputPage"; 
+import ManualInputPage from "@/pages/ManualInputPage";
 import { AnalyticsPage } from "@/pages/AnalyticsPage";
 import { ProductsPage } from "@/pages/ProductsPage";
 import { StoresPage } from "@/pages/StoresPage";
 import { UsersPage } from "@/pages/UsersPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import UserGuidePage from "@/pages/UserGuidePage";
+import AdExpensePage from "@/pages/AdExpensePage"; // <-- Perubahan di sini
 import NotFound from "./pages/NotFound";
 import { PWAManager } from "@/components/pwa/PWAManager";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -144,6 +145,15 @@ const App = () => {
                       <ProtectedRoute requiredRoles={['super_admin']}>
                         <AppLayout>
                           <SettingsPage />
+                        </AppLayout>
+                      </ProtectedRoute>
+                    } />
+
+                    {/* Rute Baru untuk Biaya Iklan */}
+                    <Route path="/ad-expenses" element={
+                      <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
+                        <AppLayout>
+                          <AdExpensePage />
                         </AppLayout>
                       </ProtectedRoute>
                     } />
