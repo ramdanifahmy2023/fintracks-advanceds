@@ -1,9 +1,8 @@
-
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { BarChart3, Eye } from 'lucide-react';
+import { BarChart3, Eye, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { usePlatformPerformance } from '@/hooks/useAnalytics';
 import { formatCurrency } from '@/lib/formatters';
@@ -19,7 +18,7 @@ export const PlatformPerformanceChart = ({
   platforms, 
   onChartClick 
 }: PlatformChartProps) => {
-  const { data: platformData, isLoading } = usePlatformPerformance(timeframe, platforms);
+  const { data: platformData, isLoading, error } = usePlatformPerformance(timeframe, platforms);
   const [sortBy, setSortBy] = useState<'revenue' | 'profit' | 'margin' | 'transactions'>('revenue');
   const [showDetails, setShowDetails] = useState(false);
 
@@ -76,6 +75,7 @@ export const PlatformPerformanceChart = ({
   }, [sortedData]);
 
   const handleBarClick = (data: any) => {
+    console.log('Platform bar clicked:', data);
     onChartClick({
       type: 'platform-detail',
       platform: data.platform_name,
@@ -101,18 +101,20 @@ export const PlatformPerformanceChart = ({
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Margin:</span>
-              <span className="font-medium text-purple-600">{data.margin.toFixed(1)}%</span>
+              <span className="font-medium text-purple-600">{(data.margin || 0).toFixed(1)}%</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Transactions:</span>
-              <span className="font-medium text-orange-600">{data.transactions}</span>
+              <span className="font-medium text-orange-600">{data.transactions || 0}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Growth:</span>
-              <span className={`font-medium ${data.growth_rate > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {data.growth_rate > 0 ? '+' : ''}{data.growth_rate.toFixed(1)}%
-              </span>
-            </div>
+            {data.growth_rate !== undefined && (
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Growth:</span>
+                <span className={`font-medium ${(data.growth_rate || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {(data.growth_rate || 0) > 0 ? '+' : ''}{(data.growth_rate || 0).toFixed(1)}%
+                </span>
+              </div>
+            )}
           </div>
           <div className="mt-2 pt-2 border-t">
             <p className="text-xs text-muted-foreground">Click for detailed analysis</p>
@@ -122,6 +124,29 @@ export const PlatformPerformanceChart = ({
     }
     return null;
   };
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <BarChart3 className="h-5 w-5 mr-2 text-primary" />
+            Platform Performance
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[350px] flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-destructive font-medium">Error loading platform data</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {error instanceof Error ? error.message : 'Failed to load platform performance'}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -133,7 +158,33 @@ export const PlatformPerformanceChart = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[350px] bg-muted rounded animate-pulse" />
+          <div className="h-[350px] flex items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin mr-2" />
+            <span className="text-muted-foreground">Loading platform data...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!sortedData || sortedData.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <BarChart3 className="h-5 w-5 mr-2 text-primary" />
+            Platform Performance
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[350px] flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-muted-foreground">No platform data available</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Try adjusting your filters or date range
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -149,7 +200,7 @@ export const PlatformPerformanceChart = ({
               Platform Performance
             </CardTitle>
             <CardDescription>
-              Comparative analysis across marketplace platforms
+              Comparative analysis across marketplace platforms - Real Data
             </CardDescription>
           </div>
           <div className="flex space-x-2">
@@ -204,7 +255,7 @@ export const PlatformPerformanceChart = ({
         
         {showDetails && (
           <div className="mt-4 space-y-3">
-            <h4 className="font-medium">Platform Details</h4>
+            <h4 className="font-medium">Platform Details (Real Data)</h4>
             {sortedData.map((platform, index) => (
               <div key={platform.platform_name} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <div className="flex items-center space-x-3">
@@ -214,16 +265,16 @@ export const PlatformPerformanceChart = ({
                   <div>
                     <p className="font-medium">{platform.platform_name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {platform.transactions} transactions • {platform.margin.toFixed(1)}% margin
+                      {platform.transactions || 0} transactions • {(platform.margin || 0).toFixed(1)}% margin
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-primary">
-                    {formatCurrency(platform.revenue)}
+                    {formatCurrency(platform.revenue || 0)}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Profit: {formatCurrency(platform.profit)}
+                    Profit: {formatCurrency(platform.profit || 0)}
                   </p>
                 </div>
               </div>
@@ -233,7 +284,7 @@ export const PlatformPerformanceChart = ({
         
         {/* Performance Summary */}
         <div className="mt-4 p-4 bg-primary/5 rounded-lg">
-          <h4 className="font-medium text-primary mb-2">Performance Summary</h4>
+          <h4 className="font-medium text-primary mb-2">Performance Summary (Real Data)</h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Top Performer:</span>
@@ -251,6 +302,26 @@ export const PlatformPerformanceChart = ({
               <span className="text-muted-foreground">Growth Leader:</span>
               <span className="ml-2 font-medium">{growthLeader}</span>
             </div>
+          </div>
+          
+          {/* Real Data Summary */}
+          <div className="mt-3 pt-3 border-t">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs text-muted-foreground">
+              <div>Total Platforms: {sortedData.length}</div>
+              <div>Total Revenue: {formatCurrency(sortedData.reduce((sum, p) => sum + (p.revenue || 0), 0))}</div>
+              <div>Total Transactions: {sortedData.reduce((sum, p) => sum + (p.transactions || 0), 0).toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Debug Info - Remove in production */}
+        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+          <h5 className="text-xs font-medium text-blue-900 dark:text-blue-100 mb-1">Data Source Info:</h5>
+          <div className="text-xs text-blue-800 dark:text-blue-200 grid grid-cols-2 gap-2">
+            <div>Platforms Found: {sortedData.length}</div>
+            <div>Platform Filter: {platforms.length > 0 ? `${platforms.length} selected` : 'All platforms'}</div>
+            <div>Timeframe: {timeframe}</div>
+            <div>Sort By: {sortBy}</div>
           </div>
         </div>
       </CardContent>
