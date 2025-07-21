@@ -1,10 +1,10 @@
-import * as React from 'react';
+import React, { useState, useEffect, useCallback, useMemo, createContext, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, AuthContextType } from '@/types/auth';
 import { useToast } from '@/hooks/use-toast';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-const AuthContext = React.createContext<AuthContextType>({
+const AuthContext = createContext<AuthContextType>({
   user: null,
   userRole: null,
   loading: true,
@@ -14,7 +14,7 @@ const AuthContext = React.createContext<AuthContextType>({
 });
 
 export const useAuth = () => {
-  const context = React.useContext(AuthContext);
+  const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
@@ -22,14 +22,14 @@ export const useAuth = () => {
 };
 
 const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = React.useState<User | null>(null);
-  const [userRole, setUserRole] = React.useState<string | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [authError, setAuthError] = React.useState<string | null>(null);
-  const [initializing, setInitializing] = React.useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [initializing, setInitializing] = useState(true);
   const { toast } = useToast();
 
-  const safeToast = React.useCallback((options: any) => {
+  const safeToast = useCallback((options: any) => {
     try {
       if (toast) {
         toast(options);
@@ -39,7 +39,7 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
     }
   }, [toast]);
 
-  const fetchUserProfile = React.useCallback(async (userId: string): Promise<User | null> => {
+  const fetchUserProfile = useCallback(async (userId: string): Promise<User | null> => {
     try {
       console.log(`👤 Fetching user profile for ID: ${userId}`);
       
@@ -71,19 +71,19 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
     }
   }, []);
 
-  const setAuthState = React.useCallback((newUser: User | null, role: string | null) => {
+  const setAuthState = useCallback((newUser: User | null, role: string | null) => {
     setUser(newUser);
     setUserRole(role);
     setAuthError(null);
   }, []);
 
-  const clearAuthState = React.useCallback(() => {
+  const clearAuthState = useCallback(() => {
     setUser(null);
     setUserRole(null);
     setAuthError(null);
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     let mounted = true;
     let timeoutId: NodeJS.Timeout;
 
@@ -213,9 +213,9 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
       console.log('🧹 Cleaning up auth subscription');
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile, safeToast, clearAuthState, setAuthState, initializing]);
+  }, [fetchUserProfile, safeToast, clearAuthState, setAuthState, initializing, loading, user]);
 
-  const login = React.useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     try {
       setLoading(true);
       setAuthError(null);
@@ -275,7 +275,7 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
     }
   }, [safeToast]);
 
-  const logout = React.useCallback(async () => {
+  const logout = useCallback(async () => {
     try {
       console.log('🚪 Logging out...');
       await supabase.auth.signOut();
@@ -294,7 +294,7 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
     }
   }, [safeToast, clearAuthState]);
 
-  const updateProfile = React.useCallback(async (updates: Partial<User>) => {
+  const updateProfile = useCallback(async (updates: Partial<User>) => {
     if (!user) return;
 
     try {
@@ -320,7 +320,7 @@ const AuthProviderCore: React.FC<{ children: React.ReactNode }> = ({ children })
     }
   }, [user, safeToast]);
 
-  const value: AuthContextType = React.useMemo(() => ({
+  const value: AuthContextType = useMemo(() => ({
     user,
     userRole,
     loading,
