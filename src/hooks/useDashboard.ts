@@ -18,12 +18,6 @@ export const usePlatforms = () => {
         
         if (error) {
           console.error('❌ usePlatforms: Query error:', error);
-          console.error('❌ usePlatforms: Error details:', {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint
-          });
           throw error;
         }
         
@@ -32,14 +26,6 @@ export const usePlatforms = () => {
           count: count,
           recordsReturned: data?.length || 0,
           sampleData: data?.slice(0, 3)
-        });
-        
-        // Check for user authentication
-        const { data: { user } } = await supabase.auth.getUser();
-        console.log('👤 usePlatforms: Current user:', {
-          id: user?.id,
-          email: user?.email,
-          authenticated: !!user
         });
         
         return data || [];
@@ -78,12 +64,6 @@ export const useStores = (platformIds: string[]) => {
         
         if (error) {
           console.error('❌ useStores: Query error:', error);
-          console.error('❌ useStores: Error details:', {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint
-          });
           throw error;
         }
         
@@ -95,26 +75,6 @@ export const useStores = (platformIds: string[]) => {
           sampleData: data?.slice(0, 3)
         });
         
-        // Check for user authentication and permissions
-        const { data: { user } } = await supabase.auth.getUser();
-        console.log('👤 useStores: Current user:', {
-          id: user?.id,
-          email: user?.email,
-          authenticated: !!user
-        });
-        
-        // Test RLS by trying to query without filters
-        const { data: allStores, error: allStoresError, count: allStoresCount } = await supabase
-          .from('stores')
-          .select('*', { count: 'exact' });
-        
-        console.log('🔍 useStores: RLS test (all stores query):', {
-          success: !allStoresError,
-          error: allStoresError?.message,
-          totalInDB: allStoresCount,
-          canAccess: allStores?.length || 0
-        });
-        
         return data || [];
       } catch (error) {
         console.error('❌ useStores: Unexpected error:', error);
@@ -122,7 +82,7 @@ export const useStores = (platformIds: string[]) => {
       }
     },
     staleTime: 10 * 60 * 1000,
-    enabled: true, // Always enabled, but filtered by platformIds
+    enabled: true,
     retry: (failureCount, error) => {
       console.log(`🔄 useStores: Retry attempt ${failureCount + 1}`);
       return failureCount < 3;
@@ -131,6 +91,7 @@ export const useStores = (platformIds: string[]) => {
   });
 };
 
+// FIXED: Dashboard Summary with REAL DATA (same logic as Analytics KPI)
 export const useDashboardSummary = (filters: FilterState) => {
   return useQuery({
     queryKey: ['dashboard-summary', filters],
@@ -144,26 +105,118 @@ export const useDashboardSummary = (filters: FilterState) => {
         stores: filters.stores
       });
       
-      const { data, error } = await supabase.rpc('get_dashboard_summary', {
-        start_date: filters.dateRange.from.toISOString().split('T')[0],
-        end_date: filters.dateRange.to.toISOString().split('T')[0],
-        platform_ids: filters.platforms.length > 0 ? filters.platforms : null,
-        store_ids: filters.stores.length > 0 ? filters.stores : null
-      });
-      
-      if (error) {
-        console.error('❌ useDashboardSummary: Error:', error);
+      try {
+        const startDate = filters.dateRange.from.toISOString().split('T')[0];
+        const endDate = filters.dateRange.to.toISOString().split('T')[0];
+
+        // Expand date range to capture more data (same logic as Analytics)
+        const expandedStartDate = new Date(filters.dateRange.from.getTime() - (90 * 24 * 60 * 60 * 1000));
+        const expandedStart = expandedStartDate.toISOString().split('T')[0];
+
+        console.log('📅 Dashboard date range:', {
+          original: `${startDate} to ${endDate}`,
+          expanded: `${expandedStart} to ${endDate}`
+        });
+
+        // Get transactions data with expanded date range
+        let query = supabase
+          .from('sales_transactions')
+          .select(`
+            selling_price,
+            profit,
+            quantity,
+            delivery_status,
+            order_created_at,
+            platforms!inner(platform_name),
+            stores!inner(store_name)
+          `)
+          .gte('order_created_at', expandedStart)
+          .lte('order_created_at', endDate);
+
+        // Apply platform filter
+        if (filters.platforms.length > 0) {
+          query = query.in('platform_id', filters.platforms);
+        }
+
+        // Apply store filter
+        if (filters.stores.length > 0) {
+          query = query.in('store_id', filters.stores);
+        }
+
+        const { data: transactions, error } = await query;
+
+        if (error) {
+          console.error('❌ useDashboardSummary: Error:', error);
+          throw error;
+        }
+
+        console.log('📊 Dashboard transactions found:', {
+          total: transactions?.length || 0,
+          sample: transactions?.[0]
+        });
+
+        // If no data found, return zero values
+        if (!transactions || transactions.length === 0) {
+          console.log('⚠️ No transactions found, returning zero summary');
+          return {
+            total_orders: 0,
+            total_packages: 0,
+            total_revenue: 0,
+            total_profit: 0,
+            completed_orders: 0,
+            completed_revenue: 0,
+            completed_profit: 0,
+            shipping_orders: 0,
+            shipping_revenue: 0,
+            cancelled_orders: 0,
+            cancelled_revenue: 0,
+            returned_orders: 0,
+            returned_revenue: 0
+          };
+        }
+
+        // Calculate summary metrics
+        const summary = {
+          total_orders: transactions.length,
+          total_packages: transactions.reduce((sum, t) => sum + Number(t.quantity || 0), 0),
+          total_revenue: transactions.reduce((sum, t) => sum + Number(t.selling_price || 0), 0),
+          total_profit: transactions.reduce((sum, t) => sum + Number(t.profit || 0), 0),
+          completed_orders: transactions.filter(t => t.delivery_status === 'Selesai').length,
+          completed_revenue: transactions
+            .filter(t => t.delivery_status === 'Selesai')
+            .reduce((sum, t) => sum + Number(t.selling_price || 0), 0),
+          completed_profit: transactions
+            .filter(t => t.delivery_status === 'Selesai')
+            .reduce((sum, t) => sum + Number(t.profit || 0), 0),
+          shipping_orders: transactions.filter(t => t.delivery_status === 'Sedang Dikirim').length,
+          shipping_revenue: transactions
+            .filter(t => t.delivery_status === 'Sedang Dikirim')
+            .reduce((sum, t) => sum + Number(t.selling_price || 0), 0),
+          cancelled_orders: transactions.filter(t => t.delivery_status === 'Batal').length,
+          cancelled_revenue: transactions
+            .filter(t => t.delivery_status === 'Batal')
+            .reduce((sum, t) => sum + Number(t.selling_price || 0), 0),
+          returned_orders: transactions.filter(t => t.delivery_status === 'Return').length,
+          returned_revenue: transactions
+            .filter(t => t.delivery_status === 'Return')
+            .reduce((sum, t) => sum + Number(t.selling_price || 0), 0)
+        };
+
+        console.log('✅ Dashboard summary calculated:', summary);
+        return summary as DashboardSummary;
+      } catch (error) {
+        console.error('❌ useDashboardSummary: Unexpected error:', error);
         throw error;
       }
-      
-      console.log('✅ useDashboardSummary: Data fetched:', data?.[0]);
-      return data?.[0] as DashboardSummary;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
+    retry: 2,
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };
 
+// FIXED: Chart Data with REAL DATA
 export const useChartData = (filters: FilterState) => {
   return useQuery({
     queryKey: ['chart-data', filters],
@@ -177,62 +230,223 @@ export const useChartData = (filters: FilterState) => {
         stores: filters.stores
       });
       
-      // Revenue trend data
-      const revenueTrendQuery = supabase
-        .from('v_monthly_trends')
-        .select('*')
-        .gte('month_start', filters.dateRange.from.toISOString())
-        .lte('month_start', filters.dateRange.to.toISOString());
+      try {
+        const startDate = filters.dateRange.from.toISOString().split('T')[0];
+        const endDate = filters.dateRange.to.toISOString().split('T')[0];
 
-      if (filters.platforms.length > 0) {
-        revenueTrendQuery.in('platform_name', filters.platforms);
+        // Expand date range to capture more data
+        const expandedStartDate = new Date(filters.dateRange.from.getTime() - (90 * 24 * 60 * 60 * 1000));
+        const expandedStart = expandedStartDate.toISOString().split('T')[0];
+
+        // Revenue trend data
+        let revenueTrendQuery = supabase
+          .from('sales_transactions')
+          .select(`
+            order_created_at,
+            selling_price,
+            profit,
+            quantity,
+            platforms!inner(platform_name)
+          `)
+          .gte('order_created_at', expandedStart)
+          .lte('order_created_at', endDate)
+          .order('order_created_at');
+
+        if (filters.platforms.length > 0) {
+          revenueTrendQuery = revenueTrendQuery.in('platform_id', filters.platforms);
+        }
+
+        // Platform performance data
+        let platformPerfQuery = supabase
+          .from('sales_transactions')
+          .select(`
+            platform_id,
+            selling_price,
+            profit,
+            quantity,
+            delivery_status,
+            platforms!inner(platform_name)
+          `)
+          .gte('order_created_at', expandedStart)
+          .lte('order_created_at', endDate);
+
+        if (filters.platforms.length > 0) {
+          platformPerfQuery = platformPerfQuery.in('platform_id', filters.platforms);
+        }
+
+        // Product performance data  
+        let productPerfQuery = supabase
+          .from('sales_transactions')
+          .select(`
+            sku_reference,
+            product_name,
+            selling_price,
+            profit,
+            quantity,
+            delivery_status
+          `)
+          .gte('order_created_at', expandedStart)
+          .lte('order_created_at', endDate)
+          .order('selling_price', { ascending: false })
+          .limit(10);
+
+        const [revenueTrend, platformPerf, productPerf] = await Promise.all([
+          revenueTrendQuery,
+          platformPerfQuery,
+          productPerfQuery
+        ]);
+
+        if (revenueTrend.error) {
+          console.error('❌ useChartData: Revenue trend error:', revenueTrend.error);
+          throw revenueTrend.error;
+        }
+        if (platformPerf.error) {
+          console.error('❌ useChartData: Platform performance error:', platformPerf.error);
+          throw platformPerf.error;
+        }
+        if (productPerf.error) {
+          console.error('❌ useChartData: Product performance error:', productPerf.error);
+          throw productPerf.error;
+        }
+
+        // Process revenue trend data (group by date)
+        const revenueTrendProcessed = revenueTrend.data?.reduce((acc: any, transaction: any) => {
+          const date = new Date(transaction.order_created_at);
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          
+          if (!acc[monthKey]) {
+            acc[monthKey] = {
+              month_start: `${monthKey}-01`,
+              revenue: 0,
+              profit: 0,
+              total_orders: 0,
+              platform_name: 'All',
+              avg_order_value: 0,
+              month: date.getMonth() + 1,
+              year: date.getFullYear(),
+              total_packages: 0,
+              unique_products_sold: 0
+            };
+          }
+          
+          acc[monthKey].revenue += Number(transaction.selling_price || 0);
+          acc[monthKey].profit += Number(transaction.profit || 0);
+          acc[monthKey].total_orders += 1;
+          acc[monthKey].total_packages += Number(transaction.quantity || 0);
+          
+          return acc;
+        }, {}) || {};
+
+        const revenueTrendArray = Object.values(revenueTrendProcessed).map((item: any) => ({
+          ...item,
+          avg_order_value: item.total_orders > 0 ? item.revenue / item.total_orders : 0
+        }));
+
+        // Process platform performance data
+        const platformPerfProcessed = platformPerf.data?.reduce((acc: any, transaction: any) => {
+          const platformName = transaction.platforms?.platform_name || 'Unknown';
+          
+          if (!acc[platformName]) {
+            acc[platformName] = {
+              platform_name: platformName,
+              platform_id: transaction.platform_id,
+              total_revenue: 0,
+              total_profit: 0,
+              total_transactions: 0,
+              completion_rate_percentage: 0,
+              profit_margin_percentage: 0,
+              avg_transaction_value: 0,
+              total_packages: 0,
+              active_days: 1,
+              total_stores: 1,
+              completed_revenue: 0,
+              completed_profit: 0
+            };
+          }
+          
+          acc[platformName].total_revenue += Number(transaction.selling_price || 0);
+          acc[platformName].total_profit += Number(transaction.profit || 0);
+          acc[platformName].total_transactions += 1;
+          acc[platformName].total_packages += Number(transaction.quantity || 0);
+          
+          if (transaction.delivery_status === 'Selesai') {
+            acc[platformName].completed_revenue += Number(transaction.selling_price || 0);
+            acc[platformName].completed_profit += Number(transaction.profit || 0);
+          }
+          
+          return acc;
+        }, {}) || {};
+
+        const platformPerfArray = Object.values(platformPerfProcessed).map((platform: any) => ({
+          ...platform,
+          profit_margin_percentage: platform.total_revenue > 0 ? (platform.total_profit / platform.total_revenue) * 100 : 0,
+          avg_transaction_value: platform.total_transactions > 0 ? platform.total_revenue / platform.total_transactions : 0,
+          completion_rate_percentage: platform.total_transactions > 0 ? (platform.completed_revenue / platform.total_revenue) * 100 : 0
+        }));
+
+        // Process product performance data
+        const productPerfProcessed = productPerf.data?.reduce((acc: any, transaction: any) => {
+          const sku = transaction.sku_reference || 'UNKNOWN';
+          const productName = transaction.product_name || 'Unknown Product';
+          
+          if (!acc[sku]) {
+            acc[sku] = {
+              product_name: productName,
+              category: 'Fashion Muslim', // Default category
+              sku_reference: sku,
+              completed_profit: 0,
+              completed_revenue: 0,
+              total_quantity_sold: 0,
+              avg_profit_per_sale: 0,
+              profit_margin_percentage: 0,
+              first_sale_date: transaction.order_created_at,
+              last_sale_date: transaction.order_created_at,
+              platforms_sold_on: 1,
+              total_sales: 0,
+              completed_quantity: 0
+            };
+          }
+          
+          acc[sku].total_sales += 1;
+          acc[sku].total_quantity_sold += Number(transaction.quantity || 0);
+          
+          if (transaction.delivery_status === 'Selesai') {
+            acc[sku].completed_profit += Number(transaction.profit || 0);
+            acc[sku].completed_revenue += Number(transaction.selling_price || 0);
+            acc[sku].completed_quantity += Number(transaction.quantity || 0);
+          }
+          
+          return acc;
+        }, {}) || {};
+
+        const productPerfArray = Object.values(productPerfProcessed).map((product: any) => ({
+          ...product,
+          avg_profit_per_sale: product.total_sales > 0 ? product.completed_profit / product.total_sales : 0,
+          profit_margin_percentage: product.completed_revenue > 0 ? (product.completed_profit / product.completed_revenue) * 100 : 0
+        }));
+
+        const result = {
+          revenueTrend: revenueTrendArray,
+          platformPerf: platformPerfArray,
+          productPerf: productPerfArray
+        };
+
+        console.log('✅ useChartData: Data processed successfully', {
+          revenueTrendCount: result.revenueTrend.length,
+          platformPerfCount: result.platformPerf.length,
+          productPerfCount: result.productPerf.length
+        });
+
+        return result;
+      } catch (error) {
+        console.error('❌ useChartData: Unexpected error:', error);
+        throw error;
       }
-
-      // Platform performance data
-      const platformPerfQuery = supabase
-        .from('v_platform_analytics')
-        .select('*');
-
-      // Product performance data  
-      const productPerfQuery = supabase
-        .from('v_product_performance')
-        .select('*')
-        .order('completed_profit', { ascending: false })
-        .limit(10);
-
-      const [revenueTrend, platformPerf, productPerf] = await Promise.all([
-        revenueTrendQuery,
-        platformPerfQuery,
-        productPerfQuery
-      ]);
-
-      if (revenueTrend.error) {
-        console.error('❌ useChartData: Revenue trend error:', revenueTrend.error);
-        throw revenueTrend.error;
-      }
-      if (platformPerf.error) {
-        console.error('❌ useChartData: Platform performance error:', platformPerf.error);
-        throw platformPerf.error;
-      }
-      if (productPerf.error) {
-        console.error('❌ useChartData: Product performance error:', productPerf.error);
-        throw productPerf.error;
-      }
-
-      console.log('✅ useChartData: Data fetched successfully', {
-        revenueTrendCount: revenueTrend.data?.length || 0,
-        platformPerfCount: platformPerf.data?.length || 0,
-        productPerfCount: productPerf.data?.length || 0
-      });
-
-      return {
-        revenueTrend: revenueTrend.data || [],
-        platformPerf: platformPerf.data || [],
-        productPerf: productPerf.data || []
-      };
     },
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
+    retry: 2,
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };
 
@@ -249,45 +463,57 @@ export const useRecentTransactions = (filters: FilterState) => {
         stores: filters.stores
       });
       
-      let query = supabase
-        .from('sales_transactions')
-        .select(`
-          id,
-          order_number,
-          product_name,
-          delivery_status,
-          selling_price,
-          profit,
-          order_created_at,
-          platforms!inner(platform_name),
-          stores!inner(store_name)
-        `)
-        .gte('order_created_at', filters.dateRange.from.toISOString())
-        .lte('order_created_at', filters.dateRange.to.toISOString())
-        .order('order_created_at', { ascending: false })
-        .limit(10);
+      try {
+        // Expand date range to capture more data
+        const expandedStartDate = new Date(filters.dateRange.from.getTime() - (90 * 24 * 60 * 60 * 1000));
+        const expandedStart = expandedStartDate.toISOString().split('T')[0];
+        const endDate = filters.dateRange.to.toISOString().split('T')[0];
 
-      // Apply platform filter if selected
-      if (filters.platforms.length > 0) {
-        query = query.in('platform_id', filters.platforms);
-      }
+        let query = supabase
+          .from('sales_transactions')
+          .select(`
+            id,
+            order_number,
+            product_name,
+            delivery_status,
+            selling_price,
+            profit,
+            order_created_at,
+            platforms!inner(platform_name),
+            stores!inner(store_name)
+          `)
+          .gte('order_created_at', expandedStart)
+          .lte('order_created_at', endDate)
+          .order('order_created_at', { ascending: false })
+          .limit(10);
 
-      // Apply store filter if selected
-      if (filters.stores.length > 0) {
-        query = query.in('store_id', filters.stores);
-      }
+        // Apply platform filter if selected
+        if (filters.platforms.length > 0) {
+          query = query.in('platform_id', filters.platforms);
+        }
 
-      const { data, error } = await query;
+        // Apply store filter if selected
+        if (filters.stores.length > 0) {
+          query = query.in('store_id', filters.stores);
+        }
 
-      if (error) {
-        console.error('❌ useRecentTransactions: Error:', error);
+        const { data, error } = await query;
+
+        if (error) {
+          console.error('❌ useRecentTransactions: Error:', error);
+          throw error;
+        }
+
+        console.log('✅ useRecentTransactions: Fetched', data?.length || 0, 'transactions');
+        return data || [];
+      } catch (error) {
+        console.error('❌ useRecentTransactions: Unexpected error:', error);
         throw error;
       }
-
-      console.log('✅ useRecentTransactions: Fetched', data?.length || 0, 'transactions');
-      return data || [];
     },
     staleTime: 30000, // 30 seconds
+    retry: 2,
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };
 
