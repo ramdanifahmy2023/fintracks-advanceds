@@ -6,6 +6,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Download, FileText, Image, FileSpreadsheet, MessageCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -66,28 +69,25 @@ export const AnalyticsExportModal = ({
   };
 
   const generatePDFReport = async () => {
-    // Basic PDF generation - in a real app, you'd use a proper PDF library
-    const content = `
-Analytics Report
-Generated: ${format(new Date(), 'dd MMM yyyy HH:mm')}
-Period: ${timeframe}
-
-Executive Summary:
-- Total Revenue: ${formatCurrency(selectedData?.totalRevenue || 0)}
-- Total Profit: ${formatCurrency(selectedData?.totalProfit || 0)}
-- Profit Margin: ${(selectedData?.profitMargin || 0).toFixed(1)}%
-- Total Transactions: ${(selectedData?.totalTransactions || 0).toLocaleString()}
-
-This is a basic implementation. In production, you would use jsPDF or similar library.
-    `;
+    const doc = new jsPDF();
     
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `analytics-report-${format(new Date(), 'yyyy-MM-dd')}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+    doc.text("Analytics Report", 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Period: ${timeframe}`, 14, 30);
+    doc.text(`Generated on: ${format(new Date(), 'dd MMM yyyy HH:mm')}`, 14, 36);
+
+    autoTable(doc, {
+      startY: 50,
+      head: [['Metric', 'Value']],
+      body: [
+        ['Total Revenue', formatCurrency(selectedData?.totalRevenue || 0)],
+        ['Total Profit', formatCurrency(selectedData?.totalProfit || 0)],
+        ['Profit Margin', `${(selectedData?.profitMargin || 0).toFixed(1)}%`],
+        ['Total Transactions', (selectedData?.totalTransactions || 0).toLocaleString()],
+      ],
+    });
+
+    doc.save(`analytics-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
   const exportChartsAsPNG = async () => {
@@ -95,22 +95,15 @@ This is a basic implementation. In production, you would use jsPDF or similar li
   };
 
   const generateExcelReport = async () => {
-    // Basic CSV generation - in a real app, you'd use xlsx library
-    const csvContent = `
-Metric,Value
-Total Revenue,${selectedData?.totalRevenue || 0}
-Total Profit,${selectedData?.totalProfit || 0}
-Profit Margin,${(selectedData?.profitMargin || 0).toFixed(1)}%
-Total Transactions,${selectedData?.totalTransactions || 0}
-    `.trim();
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `analytics-data-${format(new Date(), 'yyyy-MM-dd')}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet([
+      { Metric: "Total Revenue", Value: selectedData?.totalRevenue || 0 },
+      { Metric: "Total Profit", Value: selectedData?.totalProfit || 0 },
+      { Metric: "Profit Margin", Value: `${(selectedData?.profitMargin || 0).toFixed(1)}%` },
+      { Metric: "Total Transactions", Value: selectedData?.totalTransactions || 0 },
+    ]);
+    XLSX.utils.book_append_sheet(wb, ws, "Summary");
+    XLSX.writeFile(wb, `analytics-data-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
   };
 
   const generateBusinessSummary = async () => {
