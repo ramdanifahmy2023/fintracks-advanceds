@@ -243,9 +243,11 @@ export const useRevenueAnalytics = (timeframe: string, platforms: string[]) => {
     queryFn: async () => {
       console.log('🔍 Fetching revenue analytics data...', { timeframe, platforms });
       
+      // MOVE THESE OUTSIDE TRY BLOCK - FIX SCOPE ISSUE
+      const startDate = getDateRangeStart(timeframe);
+      const endDate = new Date().toISOString().split('T')[0];
+      
       try {
-        const startDate = getDateRangeStart(timeframe);
-        const endDate = new Date().toISOString().split('T')[0];
 
         let query = supabase
           .from('sales_transactions')
@@ -321,9 +323,11 @@ export const usePlatformPerformance = (timeframe: string, platforms: string[]) =
     queryFn: async () => {
       console.log('🔍 Fetching platform performance data...', { timeframe, platforms });
       
+      // MOVE THESE OUTSIDE TRY BLOCK - FIX SCOPE ISSUE
+      const startDate = getDateRangeStart(timeframe);
+      const endDate = new Date().toISOString().split('T')[0];
+      
       try {
-        const startDate = getDateRangeStart(timeframe);
-        const endDate = new Date().toISOString().split('T')[0];
 
         let query = supabase
           .from('sales_transactions')
@@ -399,9 +403,11 @@ export const useProductPerformance = (timeframe: string, limit: number) => {
     queryFn: async () => {
       console.log('🔍 Fetching product performance data...', { timeframe, limit });
       
+      // MOVE THESE OUTSIDE TRY BLOCK - FIX SCOPE ISSUE
+      const startDate = getDateRangeStart(timeframe);
+      const endDate = new Date().toISOString().split('T')[0];
+      
       try {
-        const startDate = getDateRangeStart(timeframe);
-        const endDate = new Date().toISOString().split('T')[0];
 
         const { data, error } = await supabase
           .from('sales_transactions')
@@ -473,9 +479,11 @@ export const useTrendAnalysis = (timeframe: string) => {
     queryFn: async () => {
       console.log('🔍 Fetching trend analysis data...', { timeframe });
       
+      // MOVE THESE OUTSIDE TRY BLOCK - FIX SCOPE ISSUE
+      const startDate = getDateRangeStart(timeframe);
+      const endDate = new Date().toISOString().split('T')[0];
+      
       try {
-        const startDate = getDateRangeStart(timeframe);
-        const endDate = new Date().toISOString().split('T')[0];
 
         // Get current period data
         const { data: currentData, error: currentError } = await supabase
