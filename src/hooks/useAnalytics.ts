@@ -47,7 +47,7 @@ export const useAnalyticsKPI = (timeframe: string, platforms: string[]) => {
         // Get current period data
         let currentQuery = supabase
           .from('sales_transactions')
-          .select('selling_price, profit, quantity, order_created_at')
+          .select('selling_price, profit, quantity, order_created_at, platform_id, product_name, platforms(platform_name)')
           .gte('order_created_at', startDateValue)
           .lte('order_created_at', endDateValue);
 
@@ -68,7 +68,7 @@ export const useAnalyticsKPI = (timeframe: string, platforms: string[]) => {
           sample: currentTransactions?.[0],
           dateRange: `${startDateValue} to ${endDateValue}`
         });
-
+        
         // If no current data found, return zero values
         if (!currentTransactions || currentTransactions.length === 0) {
           console.log('⚠️ No transactions found in current period, returning zero values');
@@ -125,6 +125,28 @@ export const useAnalyticsKPI = (timeframe: string, platforms: string[]) => {
           if (!previous || previous === 0) return 0;
           return ((current - previous) / previous) * 100;
         };
+        
+        // Find Top Platform
+        const platformPerformance = currentTransactions.reduce((acc, t) => {
+          const platformName = (t.platforms as any)?.platform_name || 'Unknown';
+          acc[platformName] = (acc[platformName] || 0) + Number(t.selling_price || 0);
+          return acc;
+        }, {} as Record<string, number>);
+
+        const topPlatform = Object.entries(platformPerformance).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+        
+        // Find Top Product
+        const productPerformance = currentTransactions.reduce((acc, t) => {
+          const productName = t.product_name || 'Unknown';
+          acc[productName] = (acc[productName] || 0) + Number(t.quantity || 0);
+          return acc;
+        }, {} as Record<string, number>);
+
+        const topProductName = Object.entries(productPerformance).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+        const topProductUnits = Object.entries(productPerformance).sort((a, b) => b[1] - a[1])[0]?.[1] || 0;
+        const topProductRevenue = currentTransactions
+          .filter(t => t.product_name === topProductName)
+          .reduce((sum, t) => sum + Number(t.selling_price || 0), 0);
 
         const result = {
           totalRevenue,
@@ -132,7 +154,7 @@ export const useAnalyticsKPI = (timeframe: string, platforms: string[]) => {
           profitMargin: totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0,
           totalTransactions,
           avgOrderValue: totalTransactions > 0 ? totalRevenue / totalTransactions : 0,
-          topPlatform: 'Shopee', // Default for now
+          topPlatform: topPlatform,
           growthRate: calculateChange(totalRevenue, prevRevenue),
           revenueChange: calculateChange(totalRevenue, prevRevenue),
           revenueTrend: calculateChange(totalRevenue, prevRevenue) > 0 ? 'up' as const : 'down' as const,
@@ -144,7 +166,7 @@ export const useAnalyticsKPI = (timeframe: string, platforms: string[]) => {
           topPlatformTrend: 'neutral' as const,
           growthRateChange: 0,
           growthRateTrend: 'neutral' as const,
-          topProduct: { name: 'Kaos Kaki Wudhu', units: 1, revenue: totalRevenue },
+          topProduct: { name: topProductName, units: topProductUnits, revenue: topProductRevenue },
           topProductChange: 0,
           topProductTrend: 'up' as const
         };
@@ -400,36 +422,61 @@ export const useTrendAnalysis = (timeframe: string) => {
         const currentRevenue = currentData?.reduce((sum, t) => sum + Number(t.selling_price || 0), 0) || 0;
         const currentProfit = currentData?.reduce((sum, t) => sum + Number(t.profit || 0), 0) || 0;
 
-        const mockData = {
+        const prevStartDate = new Date(new Date(startDateValue).getTime() - (new Date(endDateValue).getTime() - new Date(startDateValue).getTime()));
+        const prevEndDate = new Date(startDateValue);
+        
+        const { data: prevData, error: prevError } = await supabase
+          .from('sales_transactions')
+          .select('selling_price, profit, order_created_at')
+          .gte('order_created_at', prevStartDate.toISOString().split('T')[0])
+          .lte('order_created_at', prevEndDate.toISOString().split('T')[0]);
+
+        if (prevError) {
+          console.error('❌ Error fetching previous trend data:', prevError);
+          throw prevError;
+        }
+
+        const prevRevenue = prevData?.reduce((sum, t) => sum + Number(t.selling_price || 0), 0) || 0;
+        const prevProfit = prevData?.reduce((sum, t) => sum + Number(t.profit || 0), 0) || 0;
+
+        const calculateChange = (current: number, previous: number) => {
+          if (previous === 0) return 0;
+          return ((current - previous) / previous) * 100;
+        };
+
+        const revenueChange = calculateChange(currentRevenue, prevRevenue);
+        const profitChange = calculateChange(currentProfit, prevProfit);
+
+        const realData = {
           revenue: {
-            direction: 'up' as const,
-            percentage: 15.5,
-            label: 'Revenue growing',
-            description: 'Revenue shows positive growth trend',
+            direction: revenueChange > 0 ? 'up' as const : 'down' as const,
+            percentage: revenueChange,
+            label: `Revenue ${revenueChange > 0 ? 'growing' : 'declining'}`,
+            description: `Revenue shows ${revenueChange > 0 ? 'positive' : 'negative'} growth trend`,
             volatility: 'Low',
             confidence: 85
           },
           profit: {
-            direction: 'up' as const,
-            percentage: 25.3,
-            label: 'Profit growing',
+            direction: profitChange > 0 ? 'up' as const : 'down' as const,
+            percentage: profitChange,
+            label: `Profit ${profitChange > 0 ? 'growing' : 'declining'}`,
             description: 'Profit margins are improving',
             volatility: 'Medium',
             confidence: 78
           },
           growth: {
-            direction: 'up' as const,
-            percentage: 12.8,
-            label: 'Positive growth trend',
-            description: 'Business shows healthy expansion',
+            direction: revenueChange > 0 ? 'up' as const : 'down' as const,
+            percentage: revenueChange,
+            label: `${revenueChange > 0 ? 'Positive' : 'Negative'} growth trend`,
+            description: `Business shows ${revenueChange > 0 ? 'healthy expansion' : 'a slowdown'}`,
             volatility: 'Low',
             confidence: 92
           },
           forecast: {
-            summary: 'Based on current trends, expect continued growth next month',
-            revenue: currentRevenue * 1.15,
-            profit: currentProfit * 1.25,
-            growth: 15.0
+            summary: `Based on current trends, expect ${revenueChange > 0 ? 'continued growth' : 'a challenging period'} next month`,
+            revenue: currentRevenue * (1 + revenueChange / 100),
+            profit: currentProfit * (1 + profitChange / 100),
+            growth: revenueChange
           },
           patterns: [
             {
@@ -446,7 +493,7 @@ export const useTrendAnalysis = (timeframe: string) => {
         };
         
         console.log('✅ Trend analysis data fetched successfully');
-        return mockData;
+        return realData;
       } catch (error) {
         console.error('❌ Error fetching trend analysis:', error);
         throw new Error('Failed to fetch trend analysis data');
