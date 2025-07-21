@@ -201,7 +201,10 @@ const UploadPage = () => {
         toast.success(
           `Upload completed! ${result.success_count} records processed successfully.`
         );
-
+// ✅ TAMBAH invalidation untuk recent-transactions
+queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+queryClient.invalidateQueries({ queryKey: ['chart-data'] });
+queryClient.invalidateQueries({ queryKey: ['recent-transactions'] }); // ✅ TAMBAH INI
         // Refresh dashboard and stats
         queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
         queryClient.invalidateQueries({ queryKey: ['chart-data'] });
