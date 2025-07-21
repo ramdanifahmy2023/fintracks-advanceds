@@ -37,19 +37,25 @@ export const useAnalyticsKPI = (timeframe: string, platforms: string[]) => {
         const startDate = getDateRangeStart(timeframe);
         const endDate = new Date().toISOString().split('T')[0];
 
-        // Build platform filter for SQL
+        // Build platform filter for queries
         let platformFilter = '';
         if (platforms && platforms.length > 0) {
-          const platformIds = platforms.map(p => `'${p}'`).join(',');
-          platformFilter = `AND st.platform_id IN (${platformIds})`;
+          platformFilter = `Platform filter: ${platforms.length} selected`;
         }
 
         // Get current period data
-        const { data: currentData, error: currentError } = await supabase.rpc('get_analytics_kpi', {
-          start_date: startDate,
-          end_date: endDate,
-          platform_filter: platformFilter
-        });
+        let currentQuery = supabase
+          .from('sales_transactions')
+          .select('selling_price, profit, quantity, order_created_at')
+          .gte('order_created_at', startDate)
+          .lte('order_created_at', endDate);
+
+        // Apply platform filter
+        if (platforms && platforms.length > 0) {
+          currentQuery = currentQuery.in('platform_id', platforms);
+        }
+
+        const { data: currentTransactions, error: currentError } = await currentQuery;
 
         if (currentError) {
           console.error('❌ Error fetching current KPI data:', currentError);
@@ -60,18 +66,36 @@ export const useAnalyticsKPI = (timeframe: string, platforms: string[]) => {
         const prevStartDate = new Date(new Date(startDate).getTime() - (new Date(endDate).getTime() - new Date(startDate).getTime()));
         const prevEndDate = new Date(startDate);
         
-        const { data: prevData, error: prevError } = await supabase.rpc('get_analytics_kpi', {
-          start_date: prevStartDate.toISOString().split('T')[0],
-          end_date: prevEndDate.toISOString().split('T')[0],
-          platform_filter: platformFilter
-        });
+        let prevQuery = supabase
+          .from('sales_transactions')
+          .select('selling_price, profit, quantity, order_created_at')
+          .gte('order_created_at', prevStartDate.toISOString().split('T')[0])
+          .lte('order_created_at', prevEndDate.toISOString().split('T')[0]);
+
+        // Apply platform filter
+        if (platforms && platforms.length > 0) {
+          prevQuery = prevQuery.in('platform_id', platforms);
+        }
+
+        const { data: prevTransactions, error: prevError } = await prevQuery;
 
         if (prevError) {
           console.log('⚠️ Warning: Could not fetch previous period data for comparison');
         }
 
-        const current = currentData?.[0] || {};
-        const previous = prevData?.[0] || {};
+        // Calculate current period metrics
+        const current = {
+          total_revenue: currentTransactions?.reduce((sum, t) => sum + Number(t.selling_price || 0), 0) || 0,
+          total_profit: currentTransactions?.reduce((sum, t) => sum + Number(t.profit || 0), 0) || 0,
+          total_transactions: currentTransactions?.length || 0
+        };
+
+        // Calculate previous period metrics
+        const previous = {
+          total_revenue: prevTransactions?.reduce((sum, t) => sum + Number(t.selling_price || 0), 0) || 0,
+          total_profit: prevTransactions?.reduce((sum, t) => sum + Number(t.profit || 0), 0) || 0,
+          total_transactions: prevTransactions?.length || 0
+        };
 
         // Calculate changes
         const calculateChange = (current: number, previous: number): number => {
