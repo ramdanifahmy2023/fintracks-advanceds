@@ -183,7 +183,7 @@ const UploadPage = () => {
 
         // Process data using the stored procedure
         const { data: processResult, error: processError } = await supabase
-          .rpc('process_csv_upload', {
+          .rpc('process_csv_data', {
             p_batch_id: batch.id,
             p_csv_data: validationResults.validRecords
           });
