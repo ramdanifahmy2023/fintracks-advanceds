@@ -16,8 +16,9 @@ import { useCreateAdExpense } from '@/hooks/useAdExpenses';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { TablesInsert } from '@/integrations/supabase/types';
 
-// Skema validasi menggunakan Zod untuk memastikan data yang diinput benar
+// Skema validasi menggunakan Zod
 const adExpenseSchema = z.object({
   expense_date: z.date({
     required_error: 'Tanggal iklan harus diisi.',
@@ -25,7 +26,7 @@ const adExpenseSchema = z.object({
   platform_id: z.string().min(1, 'Platform harus dipilih.'),
   store_id: z.string().optional(),
   amount: z.preprocess(
-    (val) => (typeof val === 'string' ? parseInt(val.replace(/[^0-9]/g, ''), 10) : val),
+    (val) => (typeof val === 'string' ? parseInt(val.replace(/[^0-9]/g, ''), 10) || 0 : val),
     z.number().min(1, 'Biaya iklan harus lebih dari 0.')
   ),
   notes: z.string().optional(),
@@ -60,17 +61,24 @@ export const AdExpenseForm = () => {
 
   const platformId = watch('platform_id');
 
+  // PERBAIKAN: Fungsi onSubmit diubah untuk membuat payload yang benar
   const onSubmit = async (data: AdExpenseFormValues) => {
     if (!user) {
       toast.error('Anda harus login untuk menambahkan data.');
       return;
     }
 
-    await createAdExpense.mutateAsync({
-      ...data,
+    // Membuat payload yang sesuai dengan tipe `ad_expenses` di database
+    const payload: TablesInsert<'ad_expenses'> = {
+      expense_date: format(data.expense_date, 'yyyy-MM-dd'),
+      platform_id: data.platform_id,
+      store_id: data.store_id || null,
+      amount: data.amount,
+      notes: data.notes || null,
       created_by: user.id,
-      store_id: data.store_id || null, // Pastikan mengirim null jika kosong
-    }, {
+    };
+
+    await createAdExpense.mutateAsync(payload, {
       onSuccess: () => {
         toast.success('Biaya iklan berhasil ditambahkan!');
         reset({
@@ -96,7 +104,7 @@ export const AdExpenseForm = () => {
         <div className="space-y-4">
           {/* Tanggal Iklan */}
           <div>
-            <Label htmlFor="expense_date">Tanggal Iklan *</Label>
+            <Label>Tanggal Iklan *</Label>
             <Controller
               name="expense_date"
               control={control}
@@ -131,7 +139,7 @@ export const AdExpenseForm = () => {
 
           {/* Pilih Platform */}
           <div>
-            <Label htmlFor="platform_id">Pilih Platform *</Label>
+            <Label>Pilih Platform *</Label>
             <Controller
               name="platform_id"
               control={control}
@@ -162,7 +170,7 @@ export const AdExpenseForm = () => {
 
           {/* Pilih Toko (Opsional) */}
           <div>
-            <Label htmlFor="store_id">Pilih Toko (Opsional)</Label>
+            <Label>Pilih Toko (Opsional)</Label>
             <Controller
               name="store_id"
               control={control}
@@ -192,32 +200,20 @@ export const AdExpenseForm = () => {
         <div className="space-y-4">
           {/* Biaya Iklan */}
           <div>
-            <Label htmlFor="amount">Biaya Iklan *</Label>
+            <Label>Biaya Iklan *</Label>
             <Controller
                 name="amount"
                 control={control}
-                render={({ field: { onChange, value, ...rest } }) => (
+                render={({ field }) => (
                     <Input
-                        {...rest}
-                        placeholder="Rp 100.000"
+                        placeholder="Rp 0"
                         onChange={(e) => {
                             const rawValue = e.target.value.replace(/[^0-9]/g, '');
                             const numberValue = parseInt(rawValue, 10);
-                            
-                            if (!isNaN(numberValue)) {
-                                onChange(numberValue); // Simpan sebagai angka
-                            } else {
-                                onChange(0);
-                            }
+                            field.onChange(isNaN(numberValue) ? 0 : numberValue);
                         }}
-                        // Tampilkan nilai yang diformat
-                        value={new Intl.NumberFormat('id-ID', {
-                            style: 'currency',
-                            currency: 'IDR',
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 0,
-                        }).format(value || 0)}
-                        className={cn(errors.amount && "border-destructive")}
+                        value={new Intl.NumberFormat('id-ID').format(field.value || 0)}
+                        className={cn(errors.amount && "border-destructive", "pl-8")}
                     />
                 )}
             />
@@ -226,11 +222,19 @@ export const AdExpenseForm = () => {
 
           {/* Keterangan */}
           <div>
-            <Label htmlFor="notes">Keterangan</Label>
-            <Textarea
-              {...register('notes')}
-              placeholder="Contoh: Iklan produk gamis di Shopee Live"
-              className="min-h-[128px]"
+            <Label>Keterangan</Label>
+            {/* PERBAIKAN: Menggunakan Controller untuk konsistensi */}
+            <Controller
+              name="notes"
+              control={control}
+              render={({ field }) => (
+                <Textarea
+                  {...field}
+                  value={field.value ?? ''} // Pastikan nilai tidak pernah undefined
+                  placeholder="Contoh: Iklan produk gamis di Shopee Live"
+                  className="min-h-[128px]"
+                />
+              )}
             />
           </div>
         </div>
