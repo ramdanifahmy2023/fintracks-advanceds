@@ -4,23 +4,23 @@ import { supabase } from '@/integrations/supabase/client';
 // Helper function to get date range start based on timeframe
 const getDateRangeStart = (timeframe: string): string => {
   const now = new Date();
-  let daysBack = 30; // default
+  let daysBack = 90; // Increased default to capture more data
 
   switch (timeframe) {
     case '7d':
-      daysBack = 7;
+      daysBack = 60; // Look back 60 days to ensure we find data
       break;
     case '30d':
-      daysBack = 30;
+      daysBack = 90; // Look back 90 days to ensure we find data
       break;
     case '90d':
-      daysBack = 90;
+      daysBack = 180; // Look back 6 months
       break;
     case '1y':
       daysBack = 365;
       break;
     default:
-      daysBack = 30;
+      daysBack = 90;
   }
 
   const startDate = new Date(now.getTime() - (daysBack * 24 * 60 * 60 * 1000));
@@ -31,7 +31,13 @@ export const useAnalyticsKPI = (timeframe: string, platforms: string[]) => {
   return useQuery({
     queryKey: ['analytics-kpi', timeframe, platforms],
     queryFn: async () => {
-      console.log('🔍 Fetching analytics KPI data...', { timeframe, platforms });
+              console.log('🔍 Fetching analytics KPI data...', { 
+          timeframe, 
+          platforms,
+          startDate,
+          endDate,
+          dateRange: `${startDate} to ${endDate}`
+        });
       
       try {
         const startDate = getDateRangeStart(timeframe);
@@ -54,6 +60,39 @@ export const useAnalyticsKPI = (timeframe: string, platforms: string[]) => {
         if (currentError) {
           console.error('❌ Error fetching current KPI data:', currentError);
           throw currentError;
+        }
+
+        console.log('📊 Current transactions found:', {
+          count: currentTransactions?.length || 0,
+          sample: currentTransactions?.[0],
+          dateRange: `${startDate} to ${endDate}`
+        });
+
+        // If no current data found, return zero values but don't throw error
+        if (!currentTransactions || currentTransactions.length === 0) {
+          console.log('⚠️ No transactions found in current period, returning zero values');
+          return {
+            totalRevenue: 0,
+            totalProfit: 0,
+            profitMargin: 0,
+            totalTransactions: 0,
+            avgOrderValue: 0,
+            topPlatform: 'No Data',
+            growthRate: 0,
+            revenueChange: 0,
+            revenueTrend: 'neutral' as const,
+            profitChange: 0,
+            profitTrend: 'neutral' as const,
+            aovChange: 0,
+            aovTrend: 'neutral' as const,
+            topPlatformChange: 0,
+            topPlatformTrend: 'neutral' as const,
+            growthRateChange: 0,
+            growthRateTrend: 'neutral' as const,
+            topProduct: { name: 'No Data', units: 0, revenue: 0 },
+            topProductChange: 0,
+            topProductTrend: 'neutral' as const
+          };
         }
 
         // Get previous period for comparison - DIRECT QUERY NO RPC
