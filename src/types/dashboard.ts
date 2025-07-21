@@ -36,6 +36,13 @@ export interface DashboardSummary {
   cancelled_revenue: number;
   returned_orders: number;
   returned_revenue: number;
+  changes?: {
+    completed_revenue: number;
+    total_packages: number;
+    completed_profit: number;
+    completion_rate: number;
+    avg_order_value: number;
+  };
 }
 
 export interface ChartData {
