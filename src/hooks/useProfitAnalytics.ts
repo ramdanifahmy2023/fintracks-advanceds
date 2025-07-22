@@ -1,93 +1,83 @@
-
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
 import { FilterState } from '@/types/dashboard';
-import { ProfitAnalyticsData, StoreSummaryProfit, MonthlyProfitTrend } from '@/types/analytics';
+import { ProfitAnalyticsData } from '@/types/analytics';
 
 export const useProfitAnalytics = (filters: FilterState) => {
-  return useQuery({
-    queryKey: ['profit-analytics', filters],
-    queryFn: async (): Promise<ProfitAnalyticsData> => {
-      console.log('🔍 useProfitAnalytics: Fetching profit data with filters:', {
-        dateRange: {
-          from: filters.dateRange.from.toISOString().split('T')[0],
-          to: filters.dateRange.to.toISOString().split('T')[0]
-        },
-        platforms: filters.platforms,
-        stores: filters.stores
-      });
+  const [data, setData] = useState<ProfitAnalyticsData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    const fetchProfitData = async () => {
       try {
-        const fromDate = filters.dateRange.from.toISOString().split('T')[0];
-        const toDate = filters.dateRange.to.toISOString().split('T')[0];
-
-        // Get store summary profit using database function
-        const { data: storeSummaryData, error: summaryError } = await supabase
-          .rpc('get_store_summary_profit', {
-            p_from_date: fromDate,
-            p_to_date: toDate,
-            p_platform_ids: filters.platforms.length > 0 ? filters.platforms : null,
-            p_store_ids: filters.stores.length > 0 ? filters.stores : null
-          });
-
-        if (summaryError) {
-          console.error('❌ useProfitAnalytics: Store summary error:', summaryError);
-          throw new Error(`Store summary query failed: ${summaryError.message}`);
-        }
-
-        // Get monthly profit trend data
-        const { data: monthlyData, error: monthlyError } = await supabase
-          .from('monthly_store_profit_trend')
-          .select('*')
-          .gte('month', fromDate)
-          .lte('month', toDate)
-          .order('month', { ascending: false });
-
-        if (monthlyError) {
-          console.error('❌ useProfitAnalytics: Monthly trend error:', monthlyError);
-          throw new Error(`Monthly trend query failed: ${monthlyError.message}`);
-        }
-
-        // Calculate profit growth rate
-        const calculateGrowthRate = (monthlyTrend: MonthlyProfitTrend[]): number => {
-          if (monthlyTrend.length < 2) return 0;
-          
-          const sortedData = monthlyTrend.sort((a, b) => 
-            new Date(b.month).getTime() - new Date(a.month).getTime()
-          );
-          
-          const latest = sortedData[0]?.monthly_net_profit || 0;
-          const previous = sortedData[1]?.monthly_net_profit || 0;
-          
-          if (previous === 0) return latest > 0 ? 100 : 0;
-          return Number(((latest - previous) / Math.abs(previous) * 100).toFixed(2));
-        };
-
-        const result: ProfitAnalyticsData = {
-          storeSummaryProfit: (storeSummaryData || []) as StoreSummaryProfit[],
-          monthlyTrend: (monthlyData || []) as MonthlyProfitTrend[],
-          storeProfitAnalysis: [], // This would need a separate query if detailed analysis is needed
-          topPerformingStores: ((storeSummaryData || []) as StoreSummaryProfit[]).slice(0, 5),
-          profitGrowthRate: calculateGrowthRate((monthlyData || []) as MonthlyProfitTrend[])
-        };
-
-        console.log('✅ useProfitAnalytics: Data fetched successfully', {
-          storeSummaryCount: result.storeSummaryProfit.length,
-          monthlyTrendCount: result.monthlyTrend.length,
-          topStoresCount: result.topPerformingStores.length,
-          profitGrowthRate: result.profitGrowthRate
+        setIsLoading(true);
+        setError(null);
+        
+        const params = new URLSearchParams({
+          from: filters.dateRange.from.toISOString().split('T')[0],
+          to: filters.dateRange.to.toISOString().split('T')[0],
         });
 
-        return result;
+        if (filters.platforms.length > 0) {
+          params.append('platforms', JSON.stringify(filters.platforms));
+        }
+        
+        if (filters.stores.length > 0) {
+          params.append('stores', JSON.stringify(filters.stores));
+        }
 
-      } catch (error) {
-        console.error('❌ useProfitAnalytics: Unexpected error:', error);
-        throw error;
+        console.log('🔍 Fetching profit analytics with params:', params.toString());
+
+        const response = await fetch(`/api/analytics/profit?${params}`, {
+          signal: abortController.signal,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error || 'API returned error status');
+        }
+        
+        console.log('✅ Profit analytics data received:', result.data);
+        setData(result.data);
+        
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          console.log('🚫 Profit analytics request aborted');
+          return;
+        }
+        
+        console.error('❌ Error fetching profit analytics:', err);
+        setError(err instanceof Error ? err : new Error('Unknown error occurred'));
+        setData(null);
+      } finally {
+        if (!abortController.signal.aborted) {
+          setIsLoading(false);
+        }
       }
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false,
-    retry: 2,
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-  });
+    };
+
+    fetchProfitData();
+
+    return () => {
+      abortController.abort();
+    };
+  }, [
+    filters.dateRange.from.getTime(), 
+    filters.dateRange.to.getTime(), 
+    JSON.stringify(filters.platforms), 
+    JSON.stringify(filters.stores)
+  ]);
+
+  return { data, isLoading, error };
 };
