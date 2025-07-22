@@ -1,3 +1,7 @@
+// =============================================
+// FIXED: src/pages/Dashboard.tsx (Temporary - Until Lovable Creates Components)
+// =============================================
+
 import { useState, useCallback, useEffect } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,11 +25,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/formatters';
 
-// NEW IMPORTS FOR PROFIT ANALYTICS
-import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
-import { StoreProfitAnalysis } from '@/components/analytics/StoreProfitAnalysis';
-import { ProfitKPICards } from '@/components/analytics/ProfitKPICards';
-import { AnalyticsErrorBoundary } from '@/components/analytics/AnalyticsErrorBoundary';
+// COMMENTED OUT IMPORTS UNTIL LOVABLE CREATES THE FILES
+// import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
+// import { StoreProfitAnalysis } from '@/components/analytics/StoreProfitAnalysis';
+// import { ProfitKPICards } from '@/components/analytics/ProfitKPICards';
+// import { AnalyticsErrorBoundary } from '@/components/analytics/AnalyticsErrorBoundary';
 
 const Dashboard = () => {
   const { user, userRole } = useAuth();
@@ -63,15 +67,15 @@ const Dashboard = () => {
   const { data: chartData, isLoading: chartLoading, error: chartError } = useChartData(filters);
   const { data: recentTransactions, isLoading: transactionsLoading, error: transactionsError } = useRecentTransactions(filters);
   
-  // NEW PROFIT ANALYTICS HOOK
-  const { data: profitData, isLoading: profitLoading, error: profitError } = useProfitAnalytics(filters);
+  // COMMENTED OUT UNTIL LOVABLE CREATES THE HOOK
+  // const { data: profitData, isLoading: profitLoading, error: profitError } = useProfitAnalytics(filters);
 
   const handleFiltersChange = useCallback((newFilters: FilterState) => {
     console.log('📊 Dashboard: All filters changed:', newFilters);
     setFilters(newFilters);
   }, []);
 
-  const hasError = summaryError || chartError || profitError;
+  const hasError = summaryError || chartError;
 
   if (hasError) {
     return (
@@ -79,9 +83,14 @@ const Dashboard = () => {
         <GlobalFilters 
           filters={filters} 
           onFiltersChange={handleFiltersChange}
-          loading={summaryLoading || chartLoading || profitLoading}
+          loading={summaryLoading || chartLoading}
         />
-        <AnalyticsErrorBoundary error={summaryError || chartError || profitError} />
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Terjadi kesalahan saat memuat data dashboard. Silakan refresh halaman atau coba lagi nanti.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -92,7 +101,7 @@ const Dashboard = () => {
       <GlobalFilters 
         filters={filters} 
         onFiltersChange={handleFiltersChange}
-        loading={summaryLoading || chartLoading || profitLoading}
+        loading={summaryLoading || chartLoading}
       />
 
       <div className="space-y-6 px-4 pb-6">
@@ -124,21 +133,27 @@ const Dashboard = () => {
           loading={summaryLoading}
         />
 
-        {/* NEW PROFIT KPI CARDS */}
-        <AnalyticsErrorBoundary error={profitError}>
-          <ProfitKPICards 
-            data={profitData?.storeSummaryProfit || []} 
-            loading={profitLoading} 
-          />
-        </AnalyticsErrorBoundary>
+        {/* PROFIT KPI CARDS PLACEHOLDER */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <h3 className="text-lg font-medium mb-2">🚧 Profit Analytics Coming Soon</h3>
+              <p className="text-muted-foreground">
+                Profit KPI cards will appear here once Lovable AI creates the components
+              </p>
+              <div className="mt-4 text-sm text-blue-600">
+                Features: Net Profit, Ad Costs, Profit Margins, Store Performance
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Tabs defaultValue="overview" className="w-full">
-          {/* UPDATED TABS LIST - Added Profit Tab */}
-          <TabsList className="grid w-full grid-cols-4">
+          {/* TEMPORARY: Keep 3 tabs until profit components are ready */}
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="platforms">Platform</TabsTrigger>
             <TabsTrigger value="products">Produk</TabsTrigger>
-            <TabsTrigger value="profit">Profit Analysis</TabsTrigger>
           </TabsList>
           
           <TabsContent value="overview" className="space-y-6">
@@ -155,16 +170,6 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <CategoryChart data={chartData?.productPerf || []} loading={chartLoading} />
             </div>
-          </TabsContent>
-          
-          {/* NEW PROFIT TAB */}
-          <TabsContent value="profit" className="space-y-6">
-            <AnalyticsErrorBoundary error={profitError}>
-              <StoreProfitAnalysis 
-                data={profitData?.storeSummaryProfit || []} 
-                loading={profitLoading} 
-              />
-            </AnalyticsErrorBoundary>
           </TabsContent>
         </Tabs>
 
@@ -210,6 +215,38 @@ const Dashboard = () => {
                 Belum ada transaksi dalam periode ini. Coba ubah filter tanggal.
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* PROFIT PREVIEW SECTION */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Preview: Profit Analytics (Coming Soon)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 border border-dashed border-gray-300 rounded-lg text-center">
+                <div className="text-2xl font-bold text-gray-400">Rp 35M</div>
+                <div className="text-sm text-gray-500">Net Profit</div>
+              </div>
+              <div className="p-4 border border-dashed border-gray-300 rounded-lg text-center">
+                <div className="text-2xl font-bold text-gray-400">Rp 0</div>
+                <div className="text-sm text-gray-500">Ad Costs</div>
+              </div>
+              <div className="p-4 border border-dashed border-gray-300 rounded-lg text-center">
+                <div className="text-2xl font-bold text-gray-400">36.7%</div>
+                <div className="text-sm text-gray-500">Avg Margin</div>
+              </div>
+              <div className="p-4 border border-dashed border-gray-300 rounded-lg text-center">
+                <div className="text-2xl font-bold text-gray-400">2</div>
+                <div className="text-sm text-gray-500">Active Stores</div>
+              </div>
+            </div>
+            <div className="mt-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                🎯 Preview berdasarkan data Supabase: Hiban Signature dengan 48M revenue & 36% margin
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
