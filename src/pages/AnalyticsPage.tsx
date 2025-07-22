@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,12 +11,15 @@ import { ProductPerformanceAnalytics } from '@/components/analytics/ProductPerfo
 import { TrendAnalysisPanel } from '@/components/analytics/TrendAnalysisPanel';
 import { ComparativeAnalysisSection } from '@/components/analytics/ComparativeAnalysisSection';
 import { AnalyticsExportModal } from '@/components/analytics/AnalyticsExportModal';
+import { useDashboardSummary } from '@/hooks/useDashboard';
+import { FilterState } from '@/types/dashboard';
+
+// NEW IMPORTS FOR PROFIT ANALYTICS
+import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
 import { StoreProfitAnalysis } from '@/components/analytics/StoreProfitAnalysis';
+import { ProfitTrendChart } from '@/components/analytics/ProfitTrendChart';
 import { ProfitKPICards } from '@/components/analytics/ProfitKPICards';
 import { AnalyticsErrorBoundary } from '@/components/analytics/AnalyticsErrorBoundary';
-import { useDashboardSummary } from '@/hooks/useDashboard';
-import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
-import { FilterState } from '@/types/dashboard';
 
 export const AnalyticsPage = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState<'7d' | '30d' | '90d' | '1y' | 'custom'>('30d');
@@ -59,6 +61,8 @@ export const AnalyticsPage = () => {
 
   // Fetch real data from database
   const { data: summaryData, isLoading: summaryLoading } = useDashboardSummary(filters);
+  
+  // NEW PROFIT ANALYTICS HOOK
   const { data: profitData, isLoading: profitLoading, error: profitError } = useProfitAnalytics(filters);
 
   // Calculate real analytics data
@@ -137,7 +141,7 @@ export const AnalyticsPage = () => {
       </Card>
 
       {/* Data Loading State */}
-      {summaryLoading && (
+      {(summaryLoading || profitLoading) && (
         <Card>
           <CardContent className="p-6 text-center">
             <p className="text-muted-foreground">Loading analytics data...</p>
@@ -145,16 +149,16 @@ export const AnalyticsPage = () => {
         </Card>
       )}
 
-      {/* Key Performance Indicators */}
-      <AnalyticsKPIGrid timeframe={selectedTimeframe} platforms={selectedPlatforms} />
-
-      {/* Profit KPI Cards */}
+      {/* NEW PROFIT KPI SECTION */}
       <AnalyticsErrorBoundary error={profitError}>
         <ProfitKPICards 
           data={profitData?.storeSummaryProfit || []} 
           loading={profitLoading} 
         />
       </AnalyticsErrorBoundary>
+
+      {/* Key Performance Indicators */}
+      <AnalyticsKPIGrid timeframe={selectedTimeframe} platforms={selectedPlatforms} />
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -171,12 +175,18 @@ export const AnalyticsPage = () => {
         />
       </div>
 
-      {/* Profit Analysis Section */}
+      {/* NEW PROFIT ANALYSIS SECTION */}
       <AnalyticsErrorBoundary error={profitError}>
-        <StoreProfitAnalysis 
-          data={profitData?.storeSummaryProfit || []} 
-          loading={profitLoading} 
-        />
+        <div className="grid grid-cols-1 gap-6">
+          <ProfitTrendChart 
+            data={profitData?.monthlyTrend || []} 
+            loading={profitLoading} 
+          />
+          <StoreProfitAnalysis 
+            data={profitData?.storeSummaryProfit || []} 
+            loading={profitLoading} 
+          />
+        </div>
       </AnalyticsErrorBoundary>
 
       {/* Detailed Analytics */}
@@ -197,7 +207,14 @@ export const AnalyticsPage = () => {
         isOpen={exportModalOpen}
         onClose={() => setExportModalOpen(false)}
         timeframe={selectedTimeframe}
-        selectedData={analyticsData}
+        selectedData={{
+          ...analyticsData,
+          profitData: profitData ? {
+            totalNetProfit: profitData.storeSummaryProfit.reduce((sum, store) => sum + store.net_profit, 0),
+            totalAdCost: profitData.storeSummaryProfit.reduce((sum, store) => sum + store.total_ad_cost, 0),
+            avgProfitMargin: profitData.storeSummaryProfit.reduce((sum, store) => sum + store.overall_profit_margin, 0) / profitData.storeSummaryProfit.length || 0
+          } : null
+        }}
       />
 
       {/* Data Summary for Debug */}
@@ -241,9 +258,49 @@ export const AnalyticsPage = () => {
                 <p className="font-medium">{Math.abs(analyticsData.growthRate)}%</p>
               </div>
             </div>
+            
+            {/* NEW PROFIT DATA SECTION */}
+            {profitData && !profitLoading && (
+              <>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2 mt-4">
+                  Profit Analysis Summary
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Net Profit:</span>
+                    <p className="font-medium text-green-600">
+                      {new Intl.NumberFormat('id-ID', { 
+                        style: 'currency', 
+                        currency: 'IDR',
+                        minimumFractionDigits: 0
+                      }).format(profitData.storeSummaryProfit.reduce((sum, store) => sum + store.net_profit, 0))}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Ad Cost:</span>
+                    <p className="font-medium text-red-600">
+                      {new Intl.NumberFormat('id-ID', { 
+                        style: 'currency', 
+                        currency: 'IDR',
+                        minimumFractionDigits: 0
+                      }).format(profitData.storeSummaryProfit.reduce((sum, store) => sum + store.total_ad_cost, 0))}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Active Stores:</span>
+                    <p className="font-medium">{profitData.storeSummaryProfit.length}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Avg Profit Margin:</span>
+                    <p className="font-medium">
+                      {(profitData.storeSummaryProfit.reduce((sum, store) => sum + store.overall_profit_margin, 0) / profitData.storeSummaryProfit.length || 0).toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       )}
     </div>
   );
-};
