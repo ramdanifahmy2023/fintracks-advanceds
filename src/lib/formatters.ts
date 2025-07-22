@@ -1,7 +1,3 @@
-// =============================================
-// COMPLETE: src/lib/formatters.ts
-// =============================================
-
 export const formatCurrency = (amount: number, compact = false): string => {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -43,4 +39,13 @@ export const calculateProfitMargin = (revenue: number, profit: number): number =
 
 export const formatCurrencyCompact = (amount: number): string => {
   return formatCurrency(amount, true);
+};
+
+// FIX: YAxis compatible formatters (value, index) => string
+export const formatCurrencyForChart = (value: any): string => {
+  return formatCurrency(Number(value), true);
+};
+
+export const formatNumberForChart = (value: any): string => {
+  return formatCompactNumber(Number(value));
 };
