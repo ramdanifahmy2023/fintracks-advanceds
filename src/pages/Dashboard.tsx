@@ -1,5 +1,5 @@
 // =============================================
-// UPDATED: src/pages/Dashboard.tsx - With Unified GlobalFilters
+// FIXED: src/pages/Dashboard.tsx - Without Profit Analytics (Fase 1 Focus)
 // =============================================
 
 import { useState, useCallback, useEffect } from 'react';
@@ -25,11 +25,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/formatters';
 
-// REAL PROFIT ANALYTICS IMPORTS
-import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
-import { StoreProfitAnalysis } from '@/components/analytics/StoreProfitAnalysis';
-import { ProfitKPICards } from '@/components/analytics/ProfitKPICards';
-import { AnalyticsErrorBoundary } from '@/components/analytics/AnalyticsErrorBoundary';
+// COMMENT OUT PROFIT ANALYTICS FOR NOW (FASE 1 FOCUS)
+// import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
+// import { StoreProfitAnalysis } from '@/components/analytics/StoreProfitAnalysis';
+// import { ProfitKPICards } from '@/components/analytics/ProfitKPICards';
+// import { AnalyticsErrorBoundary } from '@/components/analytics/AnalyticsErrorBoundary';
 
 const Dashboard = () => {
   const { user, userRole } = useAuth();
@@ -67,8 +67,8 @@ const Dashboard = () => {
   const { data: chartData, isLoading: chartLoading, error: chartError } = useChartData(filters);
   const { data: recentTransactions, isLoading: transactionsLoading, error: transactionsError } = useRecentTransactions(filters);
   
-  // REAL PROFIT ANALYTICS HOOK
-  const { data: profitData, isLoading: profitLoading, error: profitError } = useProfitAnalytics(filters);
+  // COMMENT OUT PROFIT ANALYTICS FOR NOW
+  // const { data: profitData, isLoading: profitLoading, error: profitError } = useProfitAnalytics(filters);
 
   const handleFiltersChange = useCallback((newFilters: FilterState) => {
     console.log('📊 Dashboard: All filters changed:', newFilters);
@@ -153,7 +153,9 @@ const Dashboard = () => {
           loading={summaryLoading}
         />
 
-        {/* Profit Analytics KPI Cards - Only show when we have profit data */}
+        {/* COMMENTED OUT: Profit Analytics KPI Cards */}
+        {/* Will be enabled in Fase 2 after fixing database views */}
+        {/*
         {profitData?.storeSummaryProfit && profitData.storeSummaryProfit.length > 0 && (
           <AnalyticsErrorBoundary error={profitError}>
             <div className="space-y-4">
@@ -168,17 +170,18 @@ const Dashboard = () => {
             </div>
           </AnalyticsErrorBoundary>
         )}
+        */}
 
         {/* Charts & Analytics Tabs */}
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
+          {/* SIMPLIFIED TO 3 TABS FOR FASE 1 */}
+          <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Overview
             </TabsTrigger>
             <TabsTrigger value="platforms">Platform</TabsTrigger>
             <TabsTrigger value="products">Produk</TabsTrigger>
-            <TabsTrigger value="profit">Profit Analysis</TabsTrigger>
           </TabsList>
           
           <TabsContent value="overview" className="space-y-6">
@@ -323,7 +326,9 @@ const Dashboard = () => {
             </div>
           </TabsContent>
 
-          {/* REAL PROFIT ANALYSIS TAB */}
+          {/* PROFIT TAB COMMENTED OUT FOR FASE 1 */}
+          {/* Will be re-enabled in Fase 2 after fixing database schema */}
+          {/*
           <TabsContent value="profit" className="space-y-6">
             <AnalyticsErrorBoundary error={profitError}>
               <StoreProfitAnalysis 
@@ -332,6 +337,7 @@ const Dashboard = () => {
               />
             </AnalyticsErrorBoundary>
           </TabsContent>
+          */}
         </Tabs>
 
         {/* Recent Transactions */}
