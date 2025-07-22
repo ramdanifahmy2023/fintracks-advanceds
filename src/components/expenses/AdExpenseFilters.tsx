@@ -148,7 +148,7 @@ export const AdExpenseFilters: React.FC<AdExpenseFiltersProps> = ({
                   <SelectValue placeholder="All platforms" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All platforms</SelectItem>
+                  <SelectItem value="all">All platforms</SelectItem>
                   {platforms.map((platform) => (
                     <SelectItem key={platform.id} value={platform.id}>
                       {platform.platform_name}
@@ -169,7 +169,7 @@ export const AdExpenseFilters: React.FC<AdExpenseFiltersProps> = ({
                   <SelectValue placeholder="All stores" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All stores</SelectItem>
+                  <SelectItem value="all">All stores</SelectItem>
                   {stores.map((store) => (
                     <SelectItem key={store.id} value={store.id}>
                       {store.store_name}
