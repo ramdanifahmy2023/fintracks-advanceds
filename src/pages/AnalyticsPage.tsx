@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,7 +12,11 @@ import { ProductPerformanceAnalytics } from '@/components/analytics/ProductPerfo
 import { TrendAnalysisPanel } from '@/components/analytics/TrendAnalysisPanel';
 import { ComparativeAnalysisSection } from '@/components/analytics/ComparativeAnalysisSection';
 import { AnalyticsExportModal } from '@/components/analytics/AnalyticsExportModal';
+import { StoreProfitAnalysis } from '@/components/analytics/StoreProfitAnalysis';
+import { ProfitKPICards } from '@/components/analytics/ProfitKPICards';
+import { AnalyticsErrorBoundary } from '@/components/analytics/AnalyticsErrorBoundary';
 import { useDashboardSummary } from '@/hooks/useDashboard';
+import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
 import { FilterState } from '@/types/dashboard';
 
 export const AnalyticsPage = () => {
@@ -54,6 +59,7 @@ export const AnalyticsPage = () => {
 
   // Fetch real data from database
   const { data: summaryData, isLoading: summaryLoading } = useDashboardSummary(filters);
+  const { data: profitData, isLoading: profitLoading, error: profitError } = useProfitAnalytics(filters);
 
   // Calculate real analytics data
   const analyticsData = useMemo(() => {
@@ -142,6 +148,14 @@ export const AnalyticsPage = () => {
       {/* Key Performance Indicators */}
       <AnalyticsKPIGrid timeframe={selectedTimeframe} platforms={selectedPlatforms} />
 
+      {/* Profit KPI Cards */}
+      <AnalyticsErrorBoundary error={profitError}>
+        <ProfitKPICards 
+          data={profitData?.storeSummaryProfit || []} 
+          loading={profitLoading} 
+        />
+      </AnalyticsErrorBoundary>
+
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <RevenueAnalyticsChart 
@@ -156,6 +170,14 @@ export const AnalyticsPage = () => {
           onChartClick={(data) => handleChartDrillDown('platform', data)}
         />
       </div>
+
+      {/* Profit Analysis Section */}
+      <AnalyticsErrorBoundary error={profitError}>
+        <StoreProfitAnalysis 
+          data={profitData?.storeSummaryProfit || []} 
+          loading={profitLoading} 
+        />
+      </AnalyticsErrorBoundary>
 
       {/* Detailed Analytics */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

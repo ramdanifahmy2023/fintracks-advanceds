@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +12,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, BarChart3 } from 'lucide-react';
 import { FilterState } from '@/types/dashboard';
 import { useDashboardSummary, useChartData, useRecentTransactions, useRealtimeUpdates } from '@/hooks/useDashboard';
+import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
+import { StoreProfitAnalysis } from '@/components/analytics/StoreProfitAnalysis';
+import { ProfitKPICards } from '@/components/analytics/ProfitKPICards';
+import { AnalyticsErrorBoundary } from '@/components/analytics/AnalyticsErrorBoundary';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +56,7 @@ const Dashboard = () => {
   const { data: summaryData, isLoading: summaryLoading, error: summaryError } = useDashboardSummary(filters);
   const { data: chartData, isLoading: chartLoading, error: chartError } = useChartData(filters);
   const { data: recentTransactions, isLoading: transactionsLoading, error: transactionsError } = useRecentTransactions(filters);
+  const { data: profitData, isLoading: profitLoading, error: profitError } = useProfitAnalytics(filters);
 
   const handleFiltersChange = useCallback((newFilters: FilterState) => {
     console.log('📊 Dashboard: All filters changed:', newFilters);
@@ -116,11 +122,20 @@ const Dashboard = () => {
           loading={summaryLoading}
         />
 
+        {/* Profit KPI Cards */}
+        <AnalyticsErrorBoundary error={profitError}>
+          <ProfitKPICards 
+            data={profitData?.storeSummaryProfit || []} 
+            loading={profitLoading} 
+          />
+        </AnalyticsErrorBoundary>
+
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="platforms">Platform</TabsTrigger>
             <TabsTrigger value="products">Produk</TabsTrigger>
+            <TabsTrigger value="profit">Profit Analysis</TabsTrigger>
           </TabsList>
           
           <TabsContent value="overview" className="space-y-6">
@@ -137,6 +152,15 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <CategoryChart data={chartData?.productPerf || []} loading={chartLoading} />
             </div>
+          </TabsContent>
+          
+          <TabsContent value="profit" className="space-y-6">
+            <AnalyticsErrorBoundary error={profitError}>
+              <StoreProfitAnalysis 
+                data={profitData?.storeSummaryProfit || []} 
+                loading={profitLoading} 
+              />
+            </AnalyticsErrorBoundary>
           </TabsContent>
         </Tabs>
 
