@@ -1,3 +1,4 @@
+
 export const formatCurrency = (amount: number, compact = false): string => {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',

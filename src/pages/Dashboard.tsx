@@ -1,5 +1,6 @@
+
 // =============================================
-// FIXED: src/pages/Dashboard.tsx (Temporary - Until Lovable Creates Components)
+// FIXED: src/pages/Dashboard.tsx - Now with Real Profit Analytics
 // =============================================
 
 import { useState, useCallback, useEffect } from 'react';
@@ -25,11 +26,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/formatters';
 
-// COMMENTED OUT IMPORTS UNTIL LOVABLE CREATES THE FILES
-// import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
-// import { StoreProfitAnalysis } from '@/components/analytics/StoreProfitAnalysis';
-// import { ProfitKPICards } from '@/components/analytics/ProfitKPICards';
-// import { AnalyticsErrorBoundary } from '@/components/analytics/AnalyticsErrorBoundary';
+// REAL PROFIT ANALYTICS IMPORTS
+import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
+import { StoreProfitAnalysis } from '@/components/analytics/StoreProfitAnalysis';
+import { ProfitKPICards } from '@/components/analytics/ProfitKPICards';
+import { AnalyticsErrorBoundary } from '@/components/analytics/AnalyticsErrorBoundary';
 
 const Dashboard = () => {
   const { user, userRole } = useAuth();
@@ -67,8 +68,8 @@ const Dashboard = () => {
   const { data: chartData, isLoading: chartLoading, error: chartError } = useChartData(filters);
   const { data: recentTransactions, isLoading: transactionsLoading, error: transactionsError } = useRecentTransactions(filters);
   
-  // COMMENTED OUT UNTIL LOVABLE CREATES THE HOOK
-  // const { data: profitData, isLoading: profitLoading, error: profitError } = useProfitAnalytics(filters);
+  // REAL PROFIT ANALYTICS HOOK
+  const { data: profitData, isLoading: profitLoading, error: profitError } = useProfitAnalytics(filters);
 
   const handleFiltersChange = useCallback((newFilters: FilterState) => {
     console.log('📊 Dashboard: All filters changed:', newFilters);
@@ -133,27 +134,21 @@ const Dashboard = () => {
           loading={summaryLoading}
         />
 
-        {/* PROFIT KPI CARDS PLACEHOLDER */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center">
-              <h3 className="text-lg font-medium mb-2">🚧 Profit Analytics Coming Soon</h3>
-              <p className="text-muted-foreground">
-                Profit KPI cards will appear here once Lovable AI creates the components
-              </p>
-              <div className="mt-4 text-sm text-blue-600">
-                Features: Net Profit, Ad Costs, Profit Margins, Store Performance
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* REAL PROFIT KPI CARDS */}
+        <AnalyticsErrorBoundary error={profitError}>
+          <ProfitKPICards 
+            data={profitData?.storeSummaryProfit || []} 
+            loading={profitLoading} 
+          />
+        </AnalyticsErrorBoundary>
 
         <Tabs defaultValue="overview" className="w-full">
-          {/* TEMPORARY: Keep 3 tabs until profit components are ready */}
-          <TabsList className="grid w-full grid-cols-3">
+          {/* NOW WITH 4 TABS INCLUDING PROFIT */}
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="platforms">Platform</TabsTrigger>
             <TabsTrigger value="products">Produk</TabsTrigger>
+            <TabsTrigger value="profit">Profit Analysis</TabsTrigger>
           </TabsList>
           
           <TabsContent value="overview" className="space-y-6">
@@ -170,6 +165,16 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <CategoryChart data={chartData?.productPerf || []} loading={chartLoading} />
             </div>
+          </TabsContent>
+
+          {/* REAL PROFIT ANALYSIS TAB */}
+          <TabsContent value="profit" className="space-y-6">
+            <AnalyticsErrorBoundary error={profitError}>
+              <StoreProfitAnalysis 
+                data={profitData?.storeSummaryProfit || []} 
+                loading={profitLoading} 
+              />
+            </AnalyticsErrorBoundary>
           </TabsContent>
         </Tabs>
 
@@ -215,38 +220,6 @@ const Dashboard = () => {
                 Belum ada transaksi dalam periode ini. Coba ubah filter tanggal.
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* PROFIT PREVIEW SECTION */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Preview: Profit Analytics (Coming Soon)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-4 border border-dashed border-gray-300 rounded-lg text-center">
-                <div className="text-2xl font-bold text-gray-400">Rp 35M</div>
-                <div className="text-sm text-gray-500">Net Profit</div>
-              </div>
-              <div className="p-4 border border-dashed border-gray-300 rounded-lg text-center">
-                <div className="text-2xl font-bold text-gray-400">Rp 0</div>
-                <div className="text-sm text-gray-500">Ad Costs</div>
-              </div>
-              <div className="p-4 border border-dashed border-gray-300 rounded-lg text-center">
-                <div className="text-2xl font-bold text-gray-400">36.7%</div>
-                <div className="text-sm text-gray-500">Avg Margin</div>
-              </div>
-              <div className="p-4 border border-dashed border-gray-300 rounded-lg text-center">
-                <div className="text-2xl font-bold text-gray-400">2</div>
-                <div className="text-sm text-gray-500">Active Stores</div>
-              </div>
-            </div>
-            <div className="mt-4 text-center">
-              <p className="text-sm text-muted-foreground">
-                🎯 Preview berdasarkan data Supabase: Hiban Signature dengan 48M revenue & 36% margin
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>
