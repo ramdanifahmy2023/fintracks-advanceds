@@ -226,7 +226,7 @@ export const ProductPerformanceAnalytics = ({ timeframe = '30d' }: ProductPerfor
                     height={80}
                     fontSize={12}
                   />
-                  <YAxis tickFormatter={formatCurrencyForChart} />
+                  <YAxis tickFormatter={(value) => formatCurrency(value, true)} />
                   <Tooltip 
                     formatter={(value, name) => [
                       name === 'revenue' ? formatCurrency(value as number) : formatNumber(value as number),
