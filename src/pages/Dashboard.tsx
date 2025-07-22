@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,15 +10,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, BarChart3 } from 'lucide-react';
 import { FilterState } from '@/types/dashboard';
-import { useDashboardSummary, useChartData, useRecentTransactions, useRealtimeUpdates } from '@/hooks/useDashboard';
-import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
-import { StoreProfitAnalysis } from '@/components/analytics/StoreProfitAnalysis';
-import { ProfitKPICards } from '@/components/analytics/ProfitKPICards';
-import { AnalyticsErrorBoundary } from '@/components/analytics/AnalyticsErrorBoundary';
+import { 
+  useDashboardSummary, 
+  useChartData, 
+  useRecentTransactions, 
+  useRealtimeUpdates 
+} from '@/hooks/useDashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/formatters';
+
+// NEW IMPORTS FOR PROFIT ANALYTICS
+import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
+import { StoreProfitAnalysis } from '@/components/analytics/StoreProfitAnalysis';
+import { ProfitKPICards } from '@/components/analytics/ProfitKPICards';
+import { AnalyticsErrorBoundary } from '@/components/analytics/AnalyticsErrorBoundary';
 
 const Dashboard = () => {
   const { user, userRole } = useAuth();
@@ -56,6 +62,8 @@ const Dashboard = () => {
   const { data: summaryData, isLoading: summaryLoading, error: summaryError } = useDashboardSummary(filters);
   const { data: chartData, isLoading: chartLoading, error: chartError } = useChartData(filters);
   const { data: recentTransactions, isLoading: transactionsLoading, error: transactionsError } = useRecentTransactions(filters);
+  
+  // NEW PROFIT ANALYTICS HOOK
   const { data: profitData, isLoading: profitLoading, error: profitError } = useProfitAnalytics(filters);
 
   const handleFiltersChange = useCallback((newFilters: FilterState) => {
@@ -63,23 +71,17 @@ const Dashboard = () => {
     setFilters(newFilters);
   }, []);
 
-  const hasError = summaryError || chartError;
+  const hasError = summaryError || chartError || profitError;
 
   if (hasError) {
     return (
       <div className="space-y-6">
-        {/* Only show GlobalFilters - no duplicate */}
         <GlobalFilters 
           filters={filters} 
           onFiltersChange={handleFiltersChange}
-          loading={summaryLoading || chartLoading}
+          loading={summaryLoading || chartLoading || profitLoading}
         />
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Terjadi kesalahan saat memuat data dashboard. Silakan refresh halaman atau coba lagi nanti.
-          </AlertDescription>
-        </Alert>
+        <AnalyticsErrorBoundary error={summaryError || chartError || profitError} />
       </div>
     );
   }
@@ -90,7 +92,7 @@ const Dashboard = () => {
       <GlobalFilters 
         filters={filters} 
         onFiltersChange={handleFiltersChange}
-        loading={summaryLoading || chartLoading}
+        loading={summaryLoading || chartLoading || profitLoading}
       />
 
       <div className="space-y-6 px-4 pb-6">
@@ -122,7 +124,7 @@ const Dashboard = () => {
           loading={summaryLoading}
         />
 
-        {/* Profit KPI Cards */}
+        {/* NEW PROFIT KPI CARDS */}
         <AnalyticsErrorBoundary error={profitError}>
           <ProfitKPICards 
             data={profitData?.storeSummaryProfit || []} 
@@ -131,6 +133,7 @@ const Dashboard = () => {
         </AnalyticsErrorBoundary>
 
         <Tabs defaultValue="overview" className="w-full">
+          {/* UPDATED TABS LIST - Added Profit Tab */}
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="platforms">Platform</TabsTrigger>
@@ -154,6 +157,7 @@ const Dashboard = () => {
             </div>
           </TabsContent>
           
+          {/* NEW PROFIT TAB */}
           <TabsContent value="profit" className="space-y-6">
             <AnalyticsErrorBoundary error={profitError}>
               <StoreProfitAnalysis 
@@ -164,7 +168,7 @@ const Dashboard = () => {
           </TabsContent>
         </Tabs>
 
-        {/* Recent Transactions - FIXED VERSION */}
+        {/* Recent Transactions - EXISTING */}
         <Card>
           <CardHeader>
             <CardTitle>Transaksi Terbaru</CardTitle>
