@@ -142,7 +142,7 @@ export const AdExpenseFilters: React.FC<AdExpenseFiltersProps> = ({
               <label className="text-sm font-medium">Platform</label>
               <Select
                 value={filters.platformId || ''}
-                onValueChange={(value) => handleFilterChange('platformId', value || undefined)}
+                onValueChange={(value) => handleFilterChange('platformId', value === '' ? undefined : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All platforms" />
@@ -163,7 +163,7 @@ export const AdExpenseFilters: React.FC<AdExpenseFiltersProps> = ({
               <label className="text-sm font-medium">Store</label>
               <Select
                 value={filters.storeId || ''}
-                onValueChange={(value) => handleFilterChange('storeId', value || undefined)}
+                onValueChange={(value) => handleFilterChange('storeId', value === '' ? undefined : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All stores" />

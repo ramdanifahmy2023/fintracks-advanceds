@@ -22,14 +22,10 @@ export const useProfitAnalytics = (filters: FilterState) => {
         const fromDate = filters.dateRange.from.toISOString().split('T')[0];
         const toDate = filters.dateRange.to.toISOString().split('T')[0];
 
-        // Use the existing get_store_summary_profit function directly
+        // Get store summary data from the view
         const { data: storeSummaryData, error: summaryError } = await supabase
-          .rpc('get_store_summary_profit', {
-            p_from_date: fromDate,
-            p_to_date: toDate,
-            p_platform_ids: filters.platforms.length > 0 ? filters.platforms : null,
-            p_store_ids: filters.stores.length > 0 ? filters.stores : null
-          });
+          .from('store_summary_profit')
+          .select('*');
 
         if (summaryError) {
           console.error('Store summary error:', summaryError);

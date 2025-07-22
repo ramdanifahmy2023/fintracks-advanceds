@@ -10,7 +10,6 @@ import { EditAdExpenseModal } from '@/components/expenses/EditAdExpenseModal';
 import { DeleteAdExpenseModal } from '@/components/expenses/DeleteAdExpenseModal';
 import { AdExpenseDetailsModal } from '@/components/expenses/AdExpenseDetailsModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { useAdExpensesWithFilter, AdExpenseFilters as FilterType, AdExpense } from '@/hooks/useAdExpenses';
 import { usePlatforms } from '@/hooks/usePlatforms';
 import { useStores } from '@/hooks/useStores';
@@ -58,82 +57,82 @@ const AdExpensePage = () => {
   };
 
   return (
-    <AppLayout>
-      <div className="container mx-auto px-4 py-6 space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Ad Expense Management</h1>
-            <p className="text-gray-600 mt-2">
-              Track and manage advertising expenses across all platforms and stores
-            </p>
-          </div>
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Biaya Iklan</h1>
+          <p className="text-muted-foreground">
+            Kelola dan pantau biaya iklan di semua platform dan toko
+          </p>
+        </div>
+        <div className="mt-4 sm:mt-0">
           <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Add New Expense
+                Tambah Biaya Iklan
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Add New Ad Expense</DialogTitle>
+                <DialogTitle>Tambah Biaya Iklan Baru</DialogTitle>
               </DialogHeader>
               <AdExpenseForm onSuccess={() => setIsCreateModalOpen(false)} />
             </DialogContent>
           </Dialog>
         </div>
-
-        {/* Summary Cards */}
-        <AdExpenseSummaryCards 
-          dateFrom={filters.dateFrom}
-          dateTo={filters.dateTo}
-        />
-
-        {/* Filters */}
-        <AdExpenseFilters
-          filters={filters}
-          onFiltersChange={handleFiltersChange}
-          platforms={platforms}
-          stores={stores}
-        />
-
-        {/* Main Table */}
-        <AdExpenseTable
-          expenses={expensesData?.data || []}
-          totalCount={expensesData?.count || 0}
-          currentPage={currentPage}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onView={handleView}
-          loading={expensesLoading}
-        />
-
-        {/* Modals */}
-        <EditAdExpenseModal
-          isOpen={!!editingExpense}
-          onClose={() => setEditingExpense(null)}
-          expense={editingExpense}
-          platforms={platforms}
-          stores={stores}
-        />
-
-        <DeleteAdExpenseModal
-          isOpen={!!deletingExpense}
-          onClose={() => setDeletingExpense(null)}
-          expense={deletingExpense}
-        />
-
-        <AdExpenseDetailsModal
-          isOpen={!!viewingExpense}
-          onClose={() => setViewingExpense(null)}
-          expense={viewingExpense}
-          onEdit={handleViewEdit}
-        />
       </div>
-    </AppLayout>
+
+      {/* Summary Cards */}
+      <AdExpenseSummaryCards 
+        dateFrom={filters.dateFrom}
+        dateTo={filters.dateTo}
+      />
+
+      {/* Filters */}
+      <AdExpenseFilters
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+        platforms={platforms}
+        stores={stores}
+      />
+
+      {/* Main Table */}
+      <AdExpenseTable
+        expenses={expensesData?.data || []}
+        totalCount={expensesData?.count || 0}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onView={handleView}
+        loading={expensesLoading}
+      />
+
+      {/* Modals */}
+      <EditAdExpenseModal
+        isOpen={!!editingExpense}
+        onClose={() => setEditingExpense(null)}
+        expense={editingExpense}
+        platforms={platforms}
+        stores={stores}
+      />
+
+      <DeleteAdExpenseModal
+        isOpen={!!deletingExpense}
+        onClose={() => setDeletingExpense(null)}
+        expense={deletingExpense}
+      />
+
+      <AdExpenseDetailsModal
+        isOpen={!!viewingExpense}
+        onClose={() => setViewingExpense(null)}
+        expense={viewingExpense}
+        onEdit={handleViewEdit}
+      />
+    </div>
   );
 };
 

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,7 +19,6 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { TablesInsert } from '@/integrations/supabase/types';
 
-// Skema validasi menggunakan Zod
 const adExpenseSchema = z.object({
   expense_date: z.date({
     required_error: 'Tanggal iklan harus diisi.',
@@ -34,7 +34,11 @@ const adExpenseSchema = z.object({
 
 type AdExpenseFormValues = z.infer<typeof adExpenseSchema>;
 
-export const AdExpenseForm = () => {
+interface AdExpenseFormProps {
+  onSuccess?: () => void;
+}
+
+export const AdExpenseForm = ({ onSuccess }: AdExpenseFormProps) => {
   const { user } = useAuth();
   const { data: platforms = [], isLoading: platformsLoading } = usePlatforms();
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
@@ -61,14 +65,12 @@ export const AdExpenseForm = () => {
 
   const platformId = watch('platform_id');
 
-  // PERBAIKAN: Fungsi onSubmit diubah untuk membuat payload yang benar
   const onSubmit = async (data: AdExpenseFormValues) => {
     if (!user) {
       toast.error('Anda harus login untuk menambahkan data.');
       return;
     }
 
-    // Membuat payload yang sesuai dengan tipe `ad_expenses` di database
     const payload: TablesInsert<'ad_expenses'> = {
       expense_date: format(data.expense_date, 'yyyy-MM-dd'),
       platform_id: data.platform_id,
@@ -89,6 +91,9 @@ export const AdExpenseForm = () => {
           notes: ''
         });
         setSelectedPlatform('');
+        if (onSuccess) {
+          onSuccess();
+        }
       },
       onError: (error) => {
         toast.error(`Gagal menyimpan: ${error.message}`);
@@ -223,14 +228,13 @@ export const AdExpenseForm = () => {
           {/* Keterangan */}
           <div>
             <Label>Keterangan</Label>
-            {/* PERBAIKAN: Menggunakan Controller untuk konsistensi */}
             <Controller
               name="notes"
               control={control}
               render={({ field }) => (
                 <Textarea
                   {...field}
-                  value={field.value ?? ''} // Pastikan nilai tidak pernah undefined
+                  value={field.value ?? ''}
                   placeholder="Contoh: Iklan produk gamis di Shopee Live"
                   className="min-h-[128px]"
                 />
