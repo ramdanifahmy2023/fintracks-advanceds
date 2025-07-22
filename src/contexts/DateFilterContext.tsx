@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, subDays, subMonths, format } from 'date-fns';
-import { id } from 'date-fns/locale';
 
-interface DateRange {
+import { createContext, useContext, useState, ReactNode } from 'react';
+import { startOfMonth, endOfMonth, startOfWeek, subDays, subMonths, format } from 'date-fns';
+
+export interface DateRange {
   from: Date;
   to: Date;
   preset?: string;
@@ -25,7 +25,7 @@ const DateFilterContext = createContext<DateFilterContextType | undefined>(undef
 
 export const useDateFilter = () => {
   const context = useContext(DateFilterContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useDateFilter must be used within a DateFilterProvider');
   }
   return context;
@@ -35,50 +35,51 @@ interface DateFilterProviderProps {
   children: ReactNode;
 }
 
-export const DateFilterProvider: React.FC<DateFilterProviderProps> = ({ children }) => {
+export function DateFilterProvider({ children }: DateFilterProviderProps) {
   const [dateRange, setDateRange] = useState<DateRange>({
     from: startOfMonth(new Date()),
-    to: endOfMonth(new Date()),
+    to: new Date(),
     preset: 'thisMonth'
   });
+
+  // Console log whenever dateRange changes
+  const handleSetDateRange = (range: DateRange) => {
+    console.log('🗓️ DateFilter: Range changed:', {
+      from: format(range.from, 'yyyy-MM-dd'),
+      to: format(range.to, 'yyyy-MM-dd'),
+      preset: range.preset,
+      formattedDisplay: `${format(range.from, 'dd MMM yyyy')} - ${format(range.to, 'dd MMM yyyy')}`
+    });
+    setDateRange(range);
+  };
 
   const presets = {
     today: () => {
       const today = new Date();
-      setDateRange({
-        from: startOfDay(today),
-        to: endOfDay(today),
-        preset: 'today'
-      });
+      handleSetDateRange({ from: today, to: today, preset: 'today' });
     },
     yesterday: () => {
       const yesterday = subDays(new Date(), 1);
-      setDateRange({
-        from: startOfDay(yesterday),
-        to: endOfDay(yesterday),
-        preset: 'yesterday'
-      });
+      handleSetDateRange({ from: yesterday, to: yesterday, preset: 'yesterday' });
     },
     thisWeek: () => {
-      const today = new Date();
-      setDateRange({
-        from: startOfWeek(today, { weekStartsOn: 1 }),
-        to: endOfWeek(today, { weekStartsOn: 1 }),
+      handleSetDateRange({ 
+        from: startOfWeek(new Date(), { weekStartsOn: 1 }), 
+        to: new Date(),
         preset: 'thisWeek'
       });
     },
     thisMonth: () => {
-      const today = new Date();
-      setDateRange({
-        from: startOfMonth(today),
-        to: endOfMonth(today),
+      handleSetDateRange({ 
+        from: startOfMonth(new Date()), 
+        to: new Date(),
         preset: 'thisMonth'
       });
     },
     lastMonth: () => {
       const lastMonth = subMonths(new Date(), 1);
-      setDateRange({
-        from: startOfMonth(lastMonth),
+      handleSetDateRange({ 
+        from: startOfMonth(lastMonth), 
         to: endOfMonth(lastMonth),
         preset: 'lastMonth'
       });
@@ -86,27 +87,19 @@ export const DateFilterProvider: React.FC<DateFilterProviderProps> = ({ children
   };
 
   const formatDateRange = () => {
-    if (dateRange.preset === 'today') return 'Hari Ini';
-    if (dateRange.preset === 'yesterday') return 'Kemarin';
-    if (dateRange.preset === 'thisWeek') return 'Minggu Ini';
-    if (dateRange.preset === 'thisMonth') return 'Bulan Ini';
-    if (dateRange.preset === 'lastMonth') return 'Bulan Lalu';
-    
-    return `${format(dateRange.from, 'dd MMM', { locale: id })} - ${format(dateRange.to, 'dd MMM yyyy', { locale: id })}`;
+    return `${format(dateRange.from, 'dd MMM yyyy')} - ${format(dateRange.to, 'dd MMM yyyy')}`;
   };
 
-  const value: DateFilterContextType = {
+  const contextValue: DateFilterContextType = {
     dateRange,
-    setDateRange,
+    setDateRange: handleSetDateRange,
     presets,
     formatDateRange
   };
 
   return (
-    <DateFilterContext.Provider value={value}>
+    <DateFilterContext.Provider value={contextValue}>
       {children}
     </DateFilterContext.Provider>
   );
-};
-
-export default DateFilterContext;
+}
