@@ -17,27 +17,18 @@ export const useProfitAnalytics = (filters: FilterState) => {
         setIsLoading(true);
         setError(null);
         
-        console.log('🔍 Fetching profit analytics with filters:', {
-          from: filters.dateRange.from.toISOString().split('T')[0],
-          to: filters.dateRange.to.toISOString().split('T')[0],
-          platforms: filters.platforms,
-          stores: filters.stores
-        });
+        console.log('🔍 Fetching profit analytics with filters:', filters);
 
         const fromDate = filters.dateRange.from.toISOString().split('T')[0];
         const toDate = filters.dateRange.to.toISOString().split('T')[0];
-        
-        // Prepare platform and store IDs
-        const platformIds = filters.platforms.length > 0 ? filters.platforms : null;
-        const storeIds = filters.stores.length > 0 ? filters.stores : null;
 
-        // Call the Supabase function for store summary profit
+        // Use the existing get_store_summary_profit function directly
         const { data: storeSummaryData, error: summaryError } = await supabase
           .rpc('get_store_summary_profit', {
             p_from_date: fromDate,
             p_to_date: toDate,
-            p_platform_ids: platformIds,
-            p_store_ids: storeIds
+            p_platform_ids: filters.platforms.length > 0 ? filters.platforms : null,
+            p_store_ids: filters.stores.length > 0 ? filters.stores : null
           });
 
         if (summaryError) {
@@ -45,42 +36,32 @@ export const useProfitAnalytics = (filters: FilterState) => {
           throw new Error(`Store summary query failed: ${summaryError.message}`);
         }
 
-        // Get monthly trend data
-        let monthlyQuery = supabase
+        // Get monthly trend data from the view
+        const { data: monthlyData, error: monthlyError } = await supabase
           .from('monthly_store_profit_trend')
           .select('*')
           .gte('month', fromDate)
           .lte('month', toDate)
           .order('month', { ascending: false });
 
-        // Apply store filter if specified
-        if (storeIds && storeIds.length > 0) {
-          monthlyQuery = monthlyQuery.in('store_id', storeIds);
-        }
-
-        const { data: monthlyData, error: monthlyError } = await monthlyQuery;
-
         if (monthlyError) {
           console.error('Monthly trend error:', monthlyError);
           throw new Error(`Monthly trend query failed: ${monthlyError.message}`);
         }
-
-        // Calculate growth rate
-        const profitGrowthRate = calculateGrowthRate(monthlyData || []);
 
         const responseData: ProfitAnalyticsData = {
           storeSummaryProfit: storeSummaryData || [],
           monthlyTrend: monthlyData || [],
           storeProfitAnalysis: [],
           topPerformingStores: (storeSummaryData || []).slice(0, 5),
-          profitGrowthRate
+          profitGrowthRate: calculateGrowthRate(monthlyData || [])
         };
 
-        console.log('✅ Profit analytics data received:', responseData);
+        console.log('✅ Profit analytics data processed:', responseData);
         setData(responseData);
         
       } catch (err) {
-        if (abortController.signal.aborted) {
+        if (err instanceof Error && err.name === 'AbortError') {
           console.log('🚫 Profit analytics request aborted');
           return;
         }
