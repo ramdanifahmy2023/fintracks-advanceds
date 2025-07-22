@@ -1,3 +1,7 @@
+// =============================================
+// FIXED: src/pages/AnalyticsPage.tsx
+// =============================================
+
 import { useState, useMemo } from 'react';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,12 +18,12 @@ import { AnalyticsExportModal } from '@/components/analytics/AnalyticsExportModa
 import { useDashboardSummary } from '@/hooks/useDashboard';
 import { FilterState } from '@/types/dashboard';
 
-// NEW IMPORTS FOR PROFIT ANALYTICS
-import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
-import { StoreProfitAnalysis } from '@/components/analytics/StoreProfitAnalysis';
-import { ProfitTrendChart } from '@/components/analytics/ProfitTrendChart';
-import { ProfitKPICards } from '@/components/analytics/ProfitKPICards';
-import { AnalyticsErrorBoundary } from '@/components/analytics/AnalyticsErrorBoundary';
+// COMMENTED OUT IMPORTS UNTIL LOVABLE CREATES THE FILES
+// import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
+// import { StoreProfitAnalysis } from '@/components/analytics/StoreProfitAnalysis';
+// import { ProfitTrendChart } from '@/components/analytics/ProfitTrendChart';
+// import { ProfitKPICards } from '@/components/analytics/ProfitKPICards';
+// import { AnalyticsErrorBoundary } from '@/components/analytics/AnalyticsErrorBoundary';
 
 export const AnalyticsPage = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState<'7d' | '30d' | '90d' | '1y' | 'custom'>('30d');
@@ -62,8 +66,8 @@ export const AnalyticsPage = () => {
   // Fetch real data from database
   const { data: summaryData, isLoading: summaryLoading } = useDashboardSummary(filters);
   
-  // NEW PROFIT ANALYTICS HOOK
-  const { data: profitData, isLoading: profitLoading, error: profitError } = useProfitAnalytics(filters);
+  // COMMENTED OUT UNTIL LOVABLE CREATES THE HOOK
+  // const { data: profitData, isLoading: profitLoading, error: profitError } = useProfitAnalytics(filters);
 
   // Calculate real analytics data
   const analyticsData = useMemo(() => {
@@ -141,7 +145,7 @@ export const AnalyticsPage = () => {
       </Card>
 
       {/* Data Loading State */}
-      {(summaryLoading || profitLoading) && (
+      {summaryLoading && (
         <Card>
           <CardContent className="p-6 text-center">
             <p className="text-muted-foreground">Loading analytics data...</p>
@@ -149,13 +153,17 @@ export const AnalyticsPage = () => {
         </Card>
       )}
 
-      {/* NEW PROFIT KPI SECTION */}
-      <AnalyticsErrorBoundary error={profitError}>
-        <ProfitKPICards 
-          data={profitData?.storeSummaryProfit || []} 
-          loading={profitLoading} 
-        />
-      </AnalyticsErrorBoundary>
+      {/* PROFIT KPI SECTION - PLACEHOLDER UNTIL LOVABLE CREATES COMPONENTS */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">
+            <h3 className="text-lg font-medium mb-2">Profit Analytics Coming Soon</h3>
+            <p className="text-muted-foreground">
+              Profit KPI cards will appear here once Lovable AI creates the components
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Key Performance Indicators */}
       <AnalyticsKPIGrid timeframe={selectedTimeframe} platforms={selectedPlatforms} />
@@ -175,19 +183,17 @@ export const AnalyticsPage = () => {
         />
       </div>
 
-      {/* NEW PROFIT ANALYSIS SECTION */}
-      <AnalyticsErrorBoundary error={profitError}>
-        <div className="grid grid-cols-1 gap-6">
-          <ProfitTrendChart 
-            data={profitData?.monthlyTrend || []} 
-            loading={profitLoading} 
-          />
-          <StoreProfitAnalysis 
-            data={profitData?.storeSummaryProfit || []} 
-            loading={profitLoading} 
-          />
-        </div>
-      </AnalyticsErrorBoundary>
+      {/* PROFIT ANALYSIS SECTION - PLACEHOLDER */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">
+            <h3 className="text-lg font-medium mb-2">Store Profit Analysis Coming Soon</h3>
+            <p className="text-muted-foreground">
+              Profit trends and store analysis will appear here once Lovable AI creates the components
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Detailed Analytics */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -207,14 +213,7 @@ export const AnalyticsPage = () => {
         isOpen={exportModalOpen}
         onClose={() => setExportModalOpen(false)}
         timeframe={selectedTimeframe}
-        selectedData={{
-          ...analyticsData,
-          profitData: profitData ? {
-            totalNetProfit: profitData.storeSummaryProfit.reduce((sum, store) => sum + store.net_profit, 0),
-            totalAdCost: profitData.storeSummaryProfit.reduce((sum, store) => sum + store.total_ad_cost, 0),
-            avgProfitMargin: profitData.storeSummaryProfit.reduce((sum, store) => sum + store.overall_profit_margin, 0) / profitData.storeSummaryProfit.length || 0
-          } : null
-        }}
+        selectedData={analyticsData}
       />
 
       {/* Data Summary for Debug */}
@@ -259,49 +258,59 @@ export const AnalyticsPage = () => {
               </div>
             </div>
             
-            {/* NEW PROFIT DATA SECTION */}
-            {profitData && !profitLoading && (
-              <>
-                <h4 className="text-sm font-medium text-muted-foreground mb-2 mt-4">
-                  Profit Analysis Summary
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Net Profit:</span>
-                    <p className="font-medium text-green-600">
-                      {new Intl.NumberFormat('id-ID', { 
-                        style: 'currency', 
-                        currency: 'IDR',
-                        minimumFractionDigits: 0
-                      }).format(profitData.storeSummaryProfit.reduce((sum, store) => sum + store.net_profit, 0))}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Ad Cost:</span>
-                    <p className="font-medium text-red-600">
-                      {new Intl.NumberFormat('id-ID', { 
-                        style: 'currency', 
-                        currency: 'IDR',
-                        minimumFractionDigits: 0
-                      }).format(profitData.storeSummaryProfit.reduce((sum, store) => sum + store.total_ad_cost, 0))}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Active Stores:</span>
-                    <p className="font-medium">{profitData.storeSummaryProfit.length}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Avg Profit Margin:</span>
-                    <p className="font-medium">
-                      {(profitData.storeSummaryProfit.reduce((sum, store) => sum + store.overall_profit_margin, 0) / profitData.storeSummaryProfit.length || 0).toFixed(1)}%
-                    </p>
-                  </div>
-                </div>
-              </>
-            )}
+            {/* PROFIT DATA SECTION - PLACEHOLDER */}
+            <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+              <h4 className="text-sm font-medium text-yellow-800 mb-2">
+                🚧 Profit Analysis Section (Waiting for Lovable AI)
+              </h4>
+              <p className="text-sm text-yellow-700">
+                Once Lovable AI creates the profit analytics components, this section will show:
+                Net Profit, Ad Costs, Active Stores, and Average Profit Margin
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
     </div>
   );
 };
+
+// =============================================
+// TEMPORARY DASHBOARD.TSX FIX
+// =============================================
+
+// For Dashboard.tsx, comment out the profit-related imports and components until Lovable creates them:
+
+/*
+REPLACE the profit-related sections in Dashboard.tsx with placeholders:
+
+// Comment out these imports:
+// import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
+// import { StoreProfitAnalysis } from '@/components/analytics/StoreProfitAnalysis';
+// import { ProfitKPICards } from '@/components/analytics/ProfitKPICards';
+// import { AnalyticsErrorBoundary } from '@/components/analytics/AnalyticsErrorBoundary';
+
+// Comment out this hook:
+// const { data: profitData, isLoading: profitLoading, error: profitError } = useProfitAnalytics(filters);
+
+// Replace ProfitKPICards section with:
+<Card>
+  <CardContent className="p-6">
+    <div className="text-center">
+      <h3 className="text-lg font-medium mb-2">Profit KPI Cards Coming Soon</h3>
+      <p className="text-muted-foreground">
+        Profit analytics will appear here once Lovable AI creates the components
+      </p>
+    </div>
+  </CardContent>
+</Card>
+
+// Keep TabsList as 3 tabs temporarily:
+<TabsList className="grid w-full grid-cols-3">
+  <TabsTrigger value="overview">Overview</TabsTrigger>
+  <TabsTrigger value="platforms">Platform</TabsTrigger>
+  <TabsTrigger value="products">Produk</TabsTrigger>
+</TabsList>
+
+// Remove the profit TabsContent temporarily
+*/
