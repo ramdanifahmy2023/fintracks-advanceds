@@ -1,4 +1,3 @@
-
 export interface StoreProfitAnalysis {
   store_id: string;
   store_name: string;
