@@ -515,23 +515,38 @@ export const useRealtimeUpdates = () => {
   
   useEffect(() => {
     console.log('🔄 Setting up realtime updates...');
-    const subscription = supabase
-      .channel('dashboard-updates')
+    
+    // Sales transactions subscription
+    const salesSubscription = supabase
+      .channel('dashboard-sales-updates')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'sales_transactions' },
         (payload) => {
-          console.log('🔄 Realtime update received:', payload);
-          // Invalidate dashboard queries on data changes
+          console.log('🔄 Sales transaction update received:', payload);
           queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
           queryClient.invalidateQueries({ queryKey: ['chart-data'] });
           queryClient.invalidateQueries({ queryKey: ['recent-transactions'] });
+          queryClient.invalidateQueries({ queryKey: ['profit-analytics'] });
+        }
+      )
+      .subscribe();
+
+    // Ad expenses subscription
+    const adExpensesSubscription = supabase
+      .channel('dashboard-ad-updates')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'ad_expenses' },
+        (payload) => {
+          console.log('🔄 Ad expense update received:', payload);
+          queryClient.invalidateQueries({ queryKey: ['profit-analytics'] });
         }
       )
       .subscribe();
     
     return () => {
-      console.log('🔄 Cleaning up realtime subscription...');
-      supabase.removeChannel(subscription);
+      console.log('🔄 Cleaning up realtime subscriptions...');
+      supabase.removeChannel(salesSubscription);
+      supabase.removeChannel(adExpensesSubscription);
     };
   }, [queryClient]);
 };

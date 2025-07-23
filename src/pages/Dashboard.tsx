@@ -63,7 +63,7 @@ const Dashboard = () => {
   const { data: chartData, isLoading: chartLoading, error: chartError } = useChartData(filters);
   const { data: recentTransactions, isLoading: transactionsLoading, error: transactionsError } = useRecentTransactions(filters);
   
-  // CONSOLIDATED PROFIT ANALYTICS HOOK
+  // PROFIT ANALYTICS WITH AD EXPENSES
   const { data: profitData, isLoading: profitLoading, error: profitError } = useProfitAnalytics(filters);
 
   const handleFiltersChange = useCallback((newFilters: FilterState) => {
@@ -153,7 +153,7 @@ const Dashboard = () => {
             </div>
           </TabsContent>
 
-          {/* CONSOLIDATED PROFIT ANALYSIS TAB */}
+          {/* PROFIT ANALYSIS TAB WITH AD EXPENSES */}
           <TabsContent value="profit" className="space-y-6">
             <AnalyticsErrorBoundary error={profitError}>
               {profitData && (
@@ -162,14 +162,19 @@ const Dashboard = () => {
                   loading={profitLoading}
                   showKPIs={true}
                   showTable={true}
-                  title="Analisis Profit Bersih"
+                  title="Analisis Profit dengan Biaya Iklan"
                 />
+              )}
+              {profitLoading && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-muted-foreground">Loading profit data...</div>
+                </div>
               )}
             </AnalyticsErrorBoundary>
           </TabsContent>
         </Tabs>
 
-        {/* Recent Transactions - EXISTING */}
+        {/* Recent Transactions */}
         <Card>
           <CardHeader>
             <CardTitle>Transaksi Terbaru</CardTitle>

@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, DollarSign, Target, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Target, BarChart3, AlertCircle } from 'lucide-react';
 import { ProfitAnalyticsData } from '@/types/analytics';
 import { formatCurrency } from '@/lib/formatters';
 
@@ -77,8 +77,9 @@ export const ProfitAnalyticsSection: React.FC<ProfitAnalyticsSectionProps> = ({
 
   // Calculate totals for KPIs
   const totalRevenue = data.storeSummaryProfit.reduce((sum, store) => sum + Number(store.total_revenue || 0), 0);
-  const totalNetProfit = data.storeSummaryProfit.reduce((sum, store) => sum + Number(store.net_profit || 0), 0);
+  const totalGrossProfit = data.storeSummaryProfit.reduce((sum, store) => sum + Number(store.gross_profit || 0), 0);
   const totalAdCost = data.storeSummaryProfit.reduce((sum, store) => sum + Number(store.total_ad_cost || 0), 0);
+  const totalNetProfit = data.storeSummaryProfit.reduce((sum, store) => sum + Number(store.net_profit || 0), 0);
   const avgProfitMargin = data.storeSummaryProfit.length > 0 
     ? data.storeSummaryProfit.reduce((sum, store) => sum + Number(store.overall_profit_margin || 0), 0) / data.storeSummaryProfit.length 
     : 0;
@@ -92,25 +93,26 @@ export const ProfitAnalyticsSection: React.FC<ProfitAnalyticsSectionProps> = ({
       bgColor: 'bg-blue-50'
     },
     {
-      title: 'Net Profit',
-      value: formatCurrency(totalNetProfit),
+      title: 'Gross Profit',
+      value: formatCurrency(totalGrossProfit),
       icon: TrendingUp,
-      color: totalNetProfit >= 0 ? 'text-green-600' : 'text-red-600',
-      bgColor: totalNetProfit >= 0 ? 'bg-green-50' : 'bg-red-50'
+      color: 'text-green-600',
+      bgColor: 'bg-green-50'
     },
     {
       title: 'Total Biaya Iklan',
       value: formatCurrency(totalAdCost),
       icon: Target,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50'
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
+      alert: totalAdCost > 0
     },
     {
-      title: 'Rata-rata Margin',
-      value: `${avgProfitMargin.toFixed(1)}%`,
+      title: 'Net Profit',
+      value: formatCurrency(totalNetProfit),
       icon: BarChart3,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50'
+      color: totalNetProfit >= 0 ? 'text-green-600' : 'text-red-600',
+      bgColor: totalNetProfit >= 0 ? 'bg-green-50' : 'bg-red-50'
     }
   ];
 
@@ -125,6 +127,7 @@ export const ProfitAnalyticsSection: React.FC<ProfitAnalyticsSectionProps> = ({
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     {kpi.title}
+                    {kpi.alert && <AlertCircle className="h-3 w-3 inline-block ml-1 text-orange-500" />}
                   </CardTitle>
                   <div className={`p-2 rounded-full ${kpi.bgColor}`}>
                     <Icon className={`h-4 w-4 ${kpi.color}`} />
@@ -155,9 +158,10 @@ export const ProfitAnalyticsSection: React.FC<ProfitAnalyticsSectionProps> = ({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Toko</TableHead>
-                    <TableHead>Total Revenue</TableHead>
-                    <TableHead>Biaya Iklan</TableHead>
-                    <TableHead>Profit Bersih</TableHead>
+                    <TableHead>Revenue</TableHead>
+                    <TableHead>Gross Profit</TableHead>
+                    <TableHead className="text-red-600">Biaya Iklan</TableHead>
+                    <TableHead>Net Profit</TableHead>
                     <TableHead>Margin (%)</TableHead>
                     <TableHead>Order Selesai</TableHead>
                     <TableHead>Status</TableHead>
@@ -172,8 +176,18 @@ export const ProfitAnalyticsSection: React.FC<ProfitAnalyticsSectionProps> = ({
                       <TableCell>
                         {formatCurrency(Number(store.total_revenue || 0))}
                       </TableCell>
-                      <TableCell className="text-red-600">
-                        -{formatCurrency(Number(store.total_ad_cost || 0))}
+                      <TableCell className="text-green-600">
+                        {formatCurrency(Number(store.gross_profit || 0))}
+                      </TableCell>
+                      <TableCell className="text-red-600 font-medium">
+                        {Number(store.total_ad_cost || 0) > 0 ? (
+                          <span className="flex items-center gap-1">
+                            <Target className="h-3 w-3" />
+                            -{formatCurrency(Number(store.total_ad_cost || 0))}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">Rp 0</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -216,8 +230,14 @@ export const ProfitAnalyticsSection: React.FC<ProfitAnalyticsSectionProps> = ({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Total Revenue:</span>
-                  <p className="font-medium text-lg">
+                  <p className="font-medium text-lg text-blue-600">
                     {formatCurrency(totalRevenue)}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Gross Profit:</span>
+                  <p className="font-medium text-lg text-green-600">
+                    {formatCurrency(totalGrossProfit)}
                   </p>
                 </div>
                 <div>
@@ -227,18 +247,23 @@ export const ProfitAnalyticsSection: React.FC<ProfitAnalyticsSectionProps> = ({
                   </p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Total Profit Bersih:</span>
-                  <p className="font-medium text-lg text-green-600">
+                  <span className="text-muted-foreground">Net Profit:</span>
+                  <p className={`font-medium text-lg ${totalNetProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {formatCurrency(totalNetProfit)}
                   </p>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Rata-rata Margin:</span>
-                  <p className="font-medium text-lg">
-                    {avgProfitMargin.toFixed(1)}%
-                  </p>
-                </div>
               </div>
+              
+              {totalAdCost > 0 && (
+                <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-orange-800">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="text-sm font-medium">
+                      Biaya iklan sebesar {formatCurrency(totalAdCost)} telah diperhitungkan dalam net profit
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
