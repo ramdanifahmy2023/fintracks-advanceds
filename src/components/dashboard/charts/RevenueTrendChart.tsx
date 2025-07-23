@@ -1,143 +1,101 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { format, parseISO } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/formatters';
 
 interface RevenueTrendChartProps {
-  data: Array<{
-    month_start: string;
-    revenue: number;
-    profit: number;
-    total_orders: number;
-    platform_name: string;
-    avg_order_value: number;
-    month: number;
-    year: number;
-    total_packages: number;
-    unique_products_sold: number;
-  }>;
+  data: any[];
   loading?: boolean;
 }
 
-export const RevenueTrendChart = ({ data, loading }: RevenueTrendChartProps) => {
-  // Process data for chart
-  const chartData = data.reduce((acc, item) => {
-    const dateKey = format(parseISO(item.month_start), 'yyyy-MM');
-    const existing = acc.find(d => d.date === dateKey);
-    
-    if (existing) {
-      existing.revenue += item.revenue || 0;
-      existing.profit += item.profit || 0;
-      existing.orders += item.total_orders || 0;
-    } else {
-      acc.push({
-        date: dateKey,
-        revenue: item.revenue || 0,
-        profit: item.profit || 0,
-        orders: item.total_orders || 0,
-        displayDate: format(parseISO(item.month_start), 'MMM yyyy', { locale: id })
-      });
-    }
-    
-    return acc;
-  }, [] as Array<{
-    date: string;
-    revenue: number;
-    profit: number;
-    orders: number;
-    displayDate: string;
-  }>).sort((a, b) => a.date.localeCompare(b.date));
-
+export const RevenueTrendChart: React.FC<RevenueTrendChartProps> = ({ data, loading }) => {
   if (loading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Trend Penjualan</CardTitle>
+          <CardTitle>Trend Penjualan Bulanan</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px] bg-muted animate-pulse rounded-lg" />
+          <div className="h-80 flex items-center justify-center">
+            <div className="text-muted-foreground">Loading chart...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Process data untuk chart
+  const processedData = data?.map(item => ({
+    period: item.month_start ? new Date(item.month_start).toLocaleDateString('id-ID', { 
+      month: 'short', 
+      year: 'numeric' 
+    }) : 'N/A',
+    revenue: Number(item.revenue || 0),
+    profit: Number(item.profit || 0),
+    orders: Number(item.total_orders || 0)
+  })).sort((a, b) => new Date(a.period).getTime() - new Date(b.period).getTime()) || [];
+
+  if (processedData.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Trend Penjualan Bulanan</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80 flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-muted-foreground mb-2">Belum ada data trend untuk periode ini</p>
+              <p className="text-sm text-muted-foreground">Data akan muncul setelah ada transaksi dalam periode yang dipilih</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="col-span-full">
+    <Card>
       <CardHeader>
-        <CardTitle>Trend Penjualan</CardTitle>
+        <CardTitle>Trend Penjualan Bulanan</CardTitle>
         <p className="text-sm text-muted-foreground">
           Perkembangan revenue dan profit dari waktu ke waktu
         </p>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+        <ResponsiveContainer width="100%" height={320}>
+          <LineChart data={processedData}>
+            <CartesianGrid strokeDasharray="3 3" />
             <XAxis 
-              dataKey="displayDate" 
-              tick={{ fontSize: 12 }}
-              tickLine={false}
-              axisLine={false}
+              dataKey="period" 
+              fontSize={12}
+              tick={{ fill: '#666' }}
             />
             <YAxis 
-              tick={{ fontSize: 12 }}
-              tickFormatter={(value) => formatCurrency(value)}
-              tickLine={false}
-              axisLine={false}
+              fontSize={12}
+              tick={{ fill: '#666' }}
+              tickFormatter={(value) => formatCurrency(value, true)}
             />
             <Tooltip 
-              content={({ active, payload, label }) => {
-                if (active && payload && payload.length) {
-                  return (
-                    <div className="bg-white p-4 border rounded-lg shadow-lg border-border">
-                      <p className="font-medium text-foreground mb-2">{label}</p>
-                      {payload.map((entry, index) => (
-                        <div key={index} className="flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: entry.color }}
-                            />
-                            <span className="text-sm text-muted-foreground">
-                              {entry.name === 'revenue' ? 'Revenue' : 'Profit'}:
-                            </span>
-                          </div>
-                          <span className="font-medium text-foreground">
-                            {formatCurrency(entry.value as number)}
-                          </span>
-                        </div>
-                      ))}
-                      <div className="mt-2 pt-2 border-t border-border">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Pesanan:</span>
-                          <span className="font-medium text-foreground">
-                            {(payload[0]?.payload as any)?.orders?.toLocaleString() || 0}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-                return null;
-              }}
+              formatter={(value: number, name: string) => [
+                formatCurrency(value),
+                name === 'revenue' ? 'Revenue' : name === 'profit' ? 'Profit' : 'Orders'
+              ]}
+              labelFormatter={(label) => `Periode: ${label}`}
             />
             <Line 
               type="monotone" 
               dataKey="revenue" 
-              stroke="hsl(var(--primary))"
-              strokeWidth={3}
-              dot={{ r: 4, strokeWidth: 2 }}
-              activeDot={{ r: 6, strokeWidth: 2 }}
+              stroke="#3b82f6" 
+              strokeWidth={2}
+              dot={{ r: 4 }}
               name="revenue"
             />
             <Line 
               type="monotone" 
               dataKey="profit" 
-              stroke="hsl(var(--success))"
-              strokeWidth={3}
-              dot={{ r: 4, strokeWidth: 2 }}
-              activeDot={{ r: 6, strokeWidth: 2 }}
+              stroke="#10b981" 
+              strokeWidth={2}
+              dot={{ r: 4 }}
               name="profit"
             />
           </LineChart>
