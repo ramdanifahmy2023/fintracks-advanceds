@@ -1,8 +1,4 @@
 
-// =============================================
-// FIXED: src/pages/Dashboard.tsx - Now with Real Profit Analytics
-// =============================================
-
 import { useState, useCallback, useEffect } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,10 +22,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/formatters';
 
-// REAL PROFIT ANALYTICS IMPORTS
+// CONSOLIDATED PROFIT ANALYTICS IMPORTS
 import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
-import { StoreProfitAnalysis } from '@/components/analytics/StoreProfitAnalysis';
-import { ProfitKPICards } from '@/components/analytics/ProfitKPICards';
+import { ProfitAnalyticsSection } from '@/components/analytics/ProfitAnalyticsSection';
 import { AnalyticsErrorBoundary } from '@/components/analytics/AnalyticsErrorBoundary';
 
 const Dashboard = () => {
@@ -68,7 +63,7 @@ const Dashboard = () => {
   const { data: chartData, isLoading: chartLoading, error: chartError } = useChartData(filters);
   const { data: recentTransactions, isLoading: transactionsLoading, error: transactionsError } = useRecentTransactions(filters);
   
-  // REAL PROFIT ANALYTICS HOOK
+  // CONSOLIDATED PROFIT ANALYTICS HOOK
   const { data: profitData, isLoading: profitLoading, error: profitError } = useProfitAnalytics(filters);
 
   const handleFiltersChange = useCallback((newFilters: FilterState) => {
@@ -134,16 +129,7 @@ const Dashboard = () => {
           loading={summaryLoading}
         />
 
-        {/* REAL PROFIT KPI CARDS */}
-        <AnalyticsErrorBoundary error={profitError}>
-          <ProfitKPICards 
-            data={profitData?.storeSummaryProfit || []} 
-            loading={profitLoading} 
-          />
-        </AnalyticsErrorBoundary>
-
         <Tabs defaultValue="overview" className="w-full">
-          {/* NOW WITH 4 TABS INCLUDING PROFIT */}
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="platforms">Platform</TabsTrigger>
@@ -167,13 +153,18 @@ const Dashboard = () => {
             </div>
           </TabsContent>
 
-          {/* REAL PROFIT ANALYSIS TAB */}
+          {/* CONSOLIDATED PROFIT ANALYSIS TAB */}
           <TabsContent value="profit" className="space-y-6">
             <AnalyticsErrorBoundary error={profitError}>
-              <StoreProfitAnalysis 
-                data={profitData?.storeSummaryProfit || []} 
-                loading={profitLoading} 
-              />
+              {profitData && (
+                <ProfitAnalyticsSection
+                  data={profitData}
+                  loading={profitLoading}
+                  showKPIs={true}
+                  showTable={true}
+                  title="Analisis Profit Bersih"
+                />
+              )}
             </AnalyticsErrorBoundary>
           </TabsContent>
         </Tabs>

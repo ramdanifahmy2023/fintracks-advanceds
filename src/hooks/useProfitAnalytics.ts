@@ -22,35 +22,59 @@ export const useProfitAnalytics = (filters: FilterState) => {
         const fromDate = filters.dateRange.from.toISOString().split('T')[0];
         const toDate = filters.dateRange.to.toISOString().split('T')[0];
 
-        // Get store summary data from the view
-        const { data: storeSummaryData, error: summaryError } = await supabase
-          .from('store_summary_profit')
-          .select('*');
+        // Use the existing database function for profit summary
+        const { data: functionResult, error: functionError } = await supabase
+          .rpc('get_store_summary_profit', {
+            p_from_date: fromDate,
+            p_to_date: toDate,
+            p_platform_ids: filters.platforms.length > 0 ? filters.platforms : null,
+            p_store_ids: filters.stores.length > 0 ? filters.stores : null
+          });
 
-        if (summaryError) {
-          console.error('Store summary error:', summaryError);
-          throw new Error(`Store summary query failed: ${summaryError.message}`);
+        if (functionError) {
+          console.error('Function error:', functionError);
+          throw new Error(`Database function failed: ${functionError.message}`);
         }
 
-        // Get monthly trend data from the view
-        const { data: monthlyData, error: monthlyError } = await supabase
-          .from('monthly_store_profit_trend')
-          .select('*')
-          .gte('month', fromDate)
-          .lte('month', toDate)
-          .order('month', { ascending: false });
+        // Get monthly trend data from sales_transactions directly
+        let monthlyQuery = supabase
+          .from('sales_transactions')
+          .select(`
+            order_created_at,
+            selling_price,
+            cost_price,
+            profit,
+            delivery_status,
+            stores!inner(store_name)
+          `)
+          .gte('order_created_at', fromDate)
+          .lte('order_created_at', toDate)
+          .eq('delivery_status', 'Selesai')
+          .order('order_created_at', { ascending: false });
+
+        if (filters.platforms.length > 0) {
+          monthlyQuery = monthlyQuery.in('platform_id', filters.platforms);
+        }
+        if (filters.stores.length > 0) {
+          monthlyQuery = monthlyQuery.in('store_id', filters.stores);
+        }
+
+        const { data: monthlyData, error: monthlyError } = await monthlyQuery;
 
         if (monthlyError) {
           console.error('Monthly trend error:', monthlyError);
           throw new Error(`Monthly trend query failed: ${monthlyError.message}`);
         }
 
+        // Process monthly data
+        const monthlyTrend = processMonthlyData(monthlyData || []);
+
         const responseData: ProfitAnalyticsData = {
-          storeSummaryProfit: storeSummaryData || [],
-          monthlyTrend: monthlyData || [],
+          storeSummaryProfit: functionResult || [],
+          monthlyTrend: monthlyTrend,
           storeProfitAnalysis: [],
-          topPerformingStores: (storeSummaryData || []).slice(0, 5),
-          profitGrowthRate: calculateGrowthRate(monthlyData || [])
+          topPerformingStores: (functionResult || []).slice(0, 5),
+          profitGrowthRate: calculateGrowthRate(monthlyTrend)
         };
 
         console.log('✅ Profit analytics data processed:', responseData);
@@ -86,6 +110,36 @@ export const useProfitAnalytics = (filters: FilterState) => {
 
   return { data, isLoading, error };
 };
+
+// Helper function to process monthly data
+function processMonthlyData(transactions: any[]) {
+  const monthlyGrouped = transactions.reduce((acc, transaction) => {
+    const date = new Date(transaction.order_created_at);
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    
+    if (!acc[monthKey]) {
+      acc[monthKey] = {
+        store_id: transaction.store_id || '',
+        store_name: transaction.stores?.store_name || 'Unknown Store',
+        month: `${monthKey}-01`,
+        monthly_revenue: 0,
+        monthly_gross_profit: 0,
+        monthly_ad_cost: 0,
+        monthly_net_profit: 0,
+        monthly_orders: 0
+      };
+    }
+    
+    acc[monthKey].monthly_revenue += Number(transaction.selling_price || 0);
+    acc[monthKey].monthly_gross_profit += Number(transaction.profit || 0);
+    acc[monthKey].monthly_net_profit += Number(transaction.profit || 0); // Simplified for now
+    acc[monthKey].monthly_orders += 1;
+    
+    return acc;
+  }, {});
+
+  return Object.values(monthlyGrouped);
+}
 
 function calculateGrowthRate(monthlyData: any[]): number {
   if (monthlyData.length < 2) return 0;
