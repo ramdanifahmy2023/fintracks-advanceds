@@ -1,3 +1,4 @@
+
 import { useMemo } from 'react';
 import { SummaryCard, SummaryCardSkeleton } from './SummaryCard';
 import { DashboardSummary, SummaryCardData } from '@/types/dashboard';
@@ -20,32 +21,52 @@ interface SummaryCardsProps {
 
 export const SummaryCards = ({ data, loading }: SummaryCardsProps) => {
   const summaryCards: SummaryCardData[] = useMemo(() => {
-    if (!data) {
+    if (loading || !data) {
       return Array(8).fill(null).map((_, index) => ({
-        title: '',
-        value: '',
+        title: 'Loading...',
+        value: '...',
         icon: DollarSign,
         color: 'blue' as const,
         loading: true
       }));
     }
 
-    const completionRate = data.total_orders > 0 
-      ? (Number(data.completed_orders) / Number(data.total_orders)) * 100 
-      : 0;
+    // Safe number conversion with fallbacks
+    const safeNumber = (value: any, fallback: number = 0): number => {
+      const num = Number(value);
+      return isNaN(num) ? fallback : num;
+    };
+
+    const totalOrders = safeNumber(data.total_orders);
+    const completedOrders = safeNumber(data.completed_orders);
+    const completedRevenue = safeNumber(data.completed_revenue);
+    const completedProfit = safeNumber(data.completed_profit);
+    const totalPackages = safeNumber(data.total_packages);
+    const shippingOrders = safeNumber(data.shipping_orders);
+    const cancelledOrders = safeNumber(data.cancelled_orders);
+    const returnedOrders = safeNumber(data.returned_orders);
+
+    // Calculate completion rate
+    const completionRate = totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0;
     
-    const avgOrderValue = Number(data.completed_orders) > 0 
-      ? Number(data.completed_revenue) / Number(data.completed_orders) 
-      : 0;
+    // Calculate average order value
+    const avgOrderValue = completedOrders > 0 ? completedRevenue / completedOrders : 0;
+
+    // Safe change calculation
+    const getChangeValue = (key: keyof NonNullable<DashboardSummary['changes']>, fallback: number = 0): number => {
+      if (!data.changes || !data.changes[key]) return fallback;
+      const value = Number(data.changes[key]);
+      return isNaN(value) ? fallback : value;
+    };
 
     return [
       {
         title: 'Total Omset',
-        value: formatCurrency(Number(data.completed_revenue) || 0),
+        value: formatCurrency(completedRevenue),
         subtitle: 'Penjualan selesai',
         change: {
-          value: data.changes?.completed_revenue || 0,
-          type: (data.changes?.completed_revenue || 0) > 0 ? 'increase' : 'decrease',
+          value: getChangeValue('completed_revenue'),
+          type: getChangeValue('completed_revenue') >= 0 ? 'increase' : 'decrease',
           period: 'vs periode lalu'
         },
         icon: DollarSign,
@@ -53,11 +74,11 @@ export const SummaryCards = ({ data, loading }: SummaryCardsProps) => {
       },
       {
         title: 'Total Paket',
-        value: `${formatNumber(Number(data.total_packages) || 0)} paket`,
+        value: `${formatNumber(totalPackages)} paket`,
         subtitle: 'Kuantitas terjual',
         change: {
-          value: data.changes?.total_packages || 0,
-          type: (data.changes?.total_packages || 0) > 0 ? 'increase' : 'decrease',
+          value: getChangeValue('total_packages'),
+          type: getChangeValue('total_packages') >= 0 ? 'increase' : 'decrease',
           period: 'vs periode lalu'
         },
         icon: Package,
@@ -65,11 +86,11 @@ export const SummaryCards = ({ data, loading }: SummaryCardsProps) => {
       },
       {
         title: 'Profit Bersih',
-        value: formatCurrency(Number(data.completed_profit) || 0),
+        value: formatCurrency(completedProfit),
         subtitle: 'Setelah potong biaya',
         change: {
-          value: data.changes?.completed_profit || 0,
-          type: (data.changes?.completed_profit || 0) > 0 ? 'increase' : 'decrease',
+          value: getChangeValue('completed_profit'),
+          type: getChangeValue('completed_profit') >= 0 ? 'increase' : 'decrease',
           period: 'vs periode lalu'
         },
         icon: TrendingUp,
@@ -80,8 +101,8 @@ export const SummaryCards = ({ data, loading }: SummaryCardsProps) => {
         value: formatPercentage(completionRate),
         subtitle: 'Pesanan berhasil',
         change: {
-          value: data.changes?.completion_rate || 0,
-          type: (data.changes?.completion_rate || 0) > 0 ? 'increase' : 'decrease',
+          value: getChangeValue('completion_rate'),
+          type: getChangeValue('completion_rate') >= 0 ? 'increase' : 'decrease',
           period: 'completion rate'
         },
         icon: CheckCircle,
@@ -89,21 +110,21 @@ export const SummaryCards = ({ data, loading }: SummaryCardsProps) => {
       },
       {
         title: 'Sedang Dikirim',
-        value: `${formatNumber(Number(data.shipping_orders) || 0)} pesanan`,
+        value: `${formatNumber(shippingOrders)} pesanan`,
         subtitle: 'Dalam proses pengiriman',
         icon: Truck,
         color: 'orange' as const
       },
       {
         title: 'Pesanan Batal',
-        value: `${formatNumber(Number(data.cancelled_orders) || 0)} pesanan`,
+        value: `${formatNumber(cancelledOrders)} pesanan`,
         subtitle: 'Dibatalkan customer/sistem',
         icon: XCircle,
         color: 'red' as const
       },
       {
         title: 'Return/Refund',
-        value: `${formatNumber(Number(data.returned_orders) || 0)} pesanan`,
+        value: `${formatNumber(returnedOrders)} pesanan`,
         subtitle: 'Dikembalikan customer',
         icon: RotateCcw,
         color: 'red' as const
@@ -113,15 +134,15 @@ export const SummaryCards = ({ data, loading }: SummaryCardsProps) => {
         value: formatCurrency(avgOrderValue),
         subtitle: 'Per transaksi',
         change: {
-          value: data.changes?.avg_order_value || 0,
-          type: (data.changes?.avg_order_value || 0) > 0 ? 'increase' : 'decrease',
+          value: getChangeValue('avg_order_value'),
+          type: getChangeValue('avg_order_value') >= 0 ? 'increase' : 'decrease',
           period: 'average value'
         },
         icon: Calculator,
         color: 'blue' as const
       }
     ];
-  }, [data]);
+  }, [data, loading]);
 
   if (loading) {
     return (
@@ -136,7 +157,7 @@ export const SummaryCards = ({ data, loading }: SummaryCardsProps) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       {summaryCards.map((card, index) => (
-        <SummaryCard key={index} {...card} />
+        <SummaryCard key={`${card.title}-${index}`} {...card} />
       ))}
     </div>
   );
