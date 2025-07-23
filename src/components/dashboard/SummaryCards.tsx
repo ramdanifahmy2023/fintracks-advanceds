@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import { SummaryCard, SummaryCardSkeleton } from './SummaryCard';
 import { DashboardSummary, SummaryCardData } from '@/types/dashboard';
+import { ProfitAnalyticsData } from '@/types/analytics';
 import { formatCurrency, formatNumber, formatPercentage } from '@/lib/formatters';
 import { 
   DollarSign, 
@@ -16,10 +17,12 @@ import {
 
 interface SummaryCardsProps {
   data: DashboardSummary | undefined;
+  profitData: ProfitAnalyticsData | undefined;
   loading?: boolean;
+  profitLoading?: boolean;
 }
 
-export const SummaryCards = ({ data, loading }: SummaryCardsProps) => {
+export const SummaryCards = ({ data, profitData, loading, profitLoading }: SummaryCardsProps) => {
   const summaryCards: SummaryCardData[] = useMemo(() => {
     if (loading || !data) {
       return Array(8).fill(null).map((_, index) => ({
@@ -40,11 +43,23 @@ export const SummaryCards = ({ data, loading }: SummaryCardsProps) => {
     const totalOrders = safeNumber(data.total_orders);
     const completedOrders = safeNumber(data.completed_orders);
     const completedRevenue = safeNumber(data.completed_revenue);
-    const completedProfit = safeNumber(data.completed_profit);
     const totalPackages = safeNumber(data.total_packages);
     const shippingOrders = safeNumber(data.shipping_orders);
     const cancelledOrders = safeNumber(data.cancelled_orders);
     const returnedOrders = safeNumber(data.returned_orders);
+
+    // Calculate net profit with ad expenses from profitData
+    let netProfit = safeNumber(data.completed_profit);
+    let totalAdCost = 0;
+    
+    if (profitData && profitData.storeSummaryProfit && !profitLoading) {
+      totalAdCost = profitData.storeSummaryProfit.reduce((sum, store) => 
+        sum + safeNumber(store.total_ad_cost), 0
+      );
+      netProfit = profitData.storeSummaryProfit.reduce((sum, store) => 
+        sum + safeNumber(store.net_profit), 0
+      );
+    }
 
     // Calculate completion rate
     const completionRate = totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0;
@@ -86,15 +101,15 @@ export const SummaryCards = ({ data, loading }: SummaryCardsProps) => {
       },
       {
         title: 'Profit Bersih',
-        value: formatCurrency(completedProfit),
-        subtitle: 'Setelah potong biaya',
+        value: formatCurrency(netProfit),
+        subtitle: totalAdCost > 0 ? `Setelah potong iklan ${formatCurrency(totalAdCost)}` : 'Setelah potong biaya',
         change: {
           value: getChangeValue('completed_profit'),
-          type: getChangeValue('completed_profit') >= 0 ? 'increase' : 'decrease',
-          period: 'vs periode lalu'
+          type: netProfit >= 0 ? 'increase' : 'decrease',
+          period: 'net profit'
         },
         icon: TrendingUp,
-        color: 'purple' as const
+        color: netProfit >= 0 ? 'purple' : 'red' as const
       },
       {
         title: 'Tingkat Selesai',
@@ -142,7 +157,7 @@ export const SummaryCards = ({ data, loading }: SummaryCardsProps) => {
         color: 'blue' as const
       }
     ];
-  }, [data, loading]);
+  }, [data, profitData, loading, profitLoading]);
 
   if (loading) {
     return (

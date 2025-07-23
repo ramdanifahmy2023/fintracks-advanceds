@@ -126,7 +126,9 @@ const Dashboard = () => {
 
         <SummaryCards 
           data={summaryData} 
+          profitData={profitData}
           loading={summaryLoading}
+          profitLoading={profitLoading}
         />
 
         <Tabs defaultValue="overview" className="w-full">
