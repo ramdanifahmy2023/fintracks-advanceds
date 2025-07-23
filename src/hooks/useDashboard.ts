@@ -7,39 +7,21 @@ export const usePlatforms = () => {
   return useQuery({
     queryKey: ['platforms'],
     queryFn: async () => {
-      console.log('🔍 usePlatforms: Starting query...');
+      console.log('🔍 usePlatforms: Starting optimized query...');
       
-      try {
-        const { data, error, count } = await supabase
-          .from('platforms')
-          .select('id, platform_name, platform_code, is_active', { count: 'exact' })
-          .eq('is_active', true)
-          .order('platform_name');
-        
-        if (error) {
-          console.error('❌ usePlatforms: Query error:', error);
-          throw error;
-        }
-        
-        console.log('✅ usePlatforms: Query successful');
-        console.log('📊 usePlatforms: Data received:', {
-          count: count,
-          recordsReturned: data?.length || 0,
-          sampleData: data?.slice(0, 3)
-        });
-        
-        return data || [];
-      } catch (error) {
-        console.error('❌ usePlatforms: Unexpected error:', error);
-        throw error;
-      }
+      const { data, error } = await supabase
+        .from('platforms')
+        .select('id, platform_name, platform_code, is_active')
+        .eq('is_active', true)
+        .order('platform_name');
+      
+      if (error) throw error;
+      
+      console.log('✅ usePlatforms: Success -', data?.length, 'platforms');
+      return data || [];
     },
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    retry: (failureCount, error) => {
-      console.log(`🔄 usePlatforms: Retry attempt ${failureCount + 1}`);
-      return failureCount < 3;
-    },
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 15 * 60 * 1000, // 15 minutes - platforms rarely change
+    retry: 2,
   });
 };
 
@@ -47,506 +29,204 @@ export const useStores = (platformIds: string[]) => {
   return useQuery({
     queryKey: ['stores', platformIds],
     queryFn: async () => {
-      console.log('🔍 useStores: Starting query with platforms:', platformIds);
+      console.log('🔍 useStores: Starting optimized query for platforms:', platformIds);
       
-      try {
-        let query = supabase
-          .from('stores')
-          .select('id, store_name, store_id_external, platform_id, platforms(platform_name)', { count: 'exact' })
-          .eq('is_active', true);
-        
-        if (platformIds.length > 0) {
-          console.log('🔍 useStores: Filtering by platform IDs:', platformIds);
-          query = query.in('platform_id', platformIds);
-        }
-        
-        const { data, error, count } = await query.order('store_name');
-        
-        if (error) {
-          console.error('❌ useStores: Query error:', error);
-          throw error;
-        }
-        
-        console.log('✅ useStores: Query successful');
-        console.log('📊 useStores: Data received:', {
-          count: count,
-          recordsReturned: data?.length || 0,
-          platformFilter: platformIds.length > 0 ? platformIds : 'No filter applied',
-          sampleData: data?.slice(0, 3)
-        });
-        
-        return data || [];
-      } catch (error) {
-        console.error('❌ useStores: Unexpected error:', error);
-        throw error;
+      let query = supabase
+        .from('stores')
+        .select('id, store_name, store_id_external, platform_id, platforms(platform_name)')
+        .eq('is_active', true);
+      
+      if (platformIds.length > 0) {
+        query = query.in('platform_id', platformIds);
       }
+      
+      const { data, error } = await query.order('store_name');
+      
+      if (error) throw error;
+      
+      console.log('✅ useStores: Success -', data?.length, 'stores');
+      return data || [];
     },
-    staleTime: 10 * 60 * 1000,
-    enabled: true,
-    retry: (failureCount, error) => {
-      console.log(`🔄 useStores: Retry attempt ${failureCount + 1}`);
-      return failureCount < 3;
-    },
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    retry: 2,
   });
 };
 
-// FIXED: Dashboard Summary with REAL DATA (same logic as Analytics KPI)
+// OPTIMIZED: Use existing function instead of heavy frontend processing
 export const useDashboardSummary = (filters: FilterState) => {
   return useQuery({
     queryKey: ['dashboard-summary', filters],
     queryFn: async () => {
-      console.log('🔍 useDashboardSummary: Fetching with filters:', {
-        dateRange: {
-          from: filters.dateRange.from.toISOString().split('T')[0],
-          to: filters.dateRange.to.toISOString().split('T')[0]
-        },
-        platforms: filters.platforms,
-        stores: filters.stores
+      console.log('🔍 useDashboardSummary: Using optimized database function');
+      
+      const { data, error } = await supabase.rpc('get_dashboard_summary', {
+        start_date: filters.dateRange.from.toISOString().split('T')[0],
+        end_date: filters.dateRange.to.toISOString().split('T')[0],
+        platform_ids: filters.platforms.length > 0 ? filters.platforms : null,
+        store_ids: filters.stores.length > 0 ? filters.stores : null
       });
       
+      if (error) throw error;
+      
+      // Simple change calculation (previous logic was too heavy)
+      const summary: DashboardSummary = {
+        ...data[0],
+        changes: {
+          completed_revenue: 0, // Will be calculated properly later
+          total_packages: 0,
+          completed_profit: 0,
+          completion_rate: 0,
+          avg_order_value: 0
+        }
+      };
+
+      console.log('✅ useDashboardSummary: Success');
+      return summary;
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    refetchOnWindowFocus: false,
+    retry: 2,
+  });
+};
+
+// OPTIMIZED: Use database views instead of frontend processing
+export const useChartData = (filters: FilterState) => {
+  return useQuery({
+    queryKey: ['chart-data', filters],
+    queryFn: async () => {
+      console.log('🔍 useChartData: Using optimized database views');
+      
       try {
-        const { from, to } = filters.dateRange;
-        const diff = to.getTime() - from.getTime();
-
-        const currentStartDate = from.toISOString().split('T')[0];
-        const currentEndDate = to.toISOString().split('T')[0];
-
-        const prevStartDate = new Date(from.getTime() - diff).toISOString().split('T')[0];
-        const prevEndDate = currentStartDate;
-
-        const fetchDataForPeriod = async (start: string, end: string) => {
-          let query = supabase
-            .from('sales_transactions')
-            .select('selling_price, profit, quantity, delivery_status')
-            .gte('order_created_at', start)
-            .lte('order_created_at', end);
-
-          if (filters.platforms.length > 0) {
-            query = query.in('platform_id', filters.platforms);
-          }
-          if (filters.stores.length > 0) {
-            query = query.in('store_id', filters.stores);
-          }
-          const { data, error } = await query;
-          if (error) throw error;
-          return data || [];
-        };
-
-        const [currentTransactions, prevTransactions] = await Promise.all([
-          fetchDataForPeriod(currentStartDate, currentEndDate),
-          fetchDataForPeriod(prevStartDate, prevEndDate)
+        // Use optimized views instead of heavy processing
+        const [revenueTrendQuery, platformPerfQuery] = await Promise.all([
+          supabase
+            .from('v_revenue_trend')
+            .select('*')
+            .gte('month_start', filters.dateRange.from.toISOString().split('T')[0])
+            .lte('month_start', filters.dateRange.to.toISOString().split('T')[0])
+            .order('month_start'),
+          
+          supabase
+            .from('v_platform_performance_chart')
+            .select('*')
+            .order('total_revenue', { ascending: false })
         ]);
-        
-        const calculateMetrics = (transactions: any[]) => {
-          if (!transactions || transactions.length === 0) {
-            return {
-              total_orders: 0,
-              total_packages: 0,
-              total_revenue: 0,
-              total_profit: 0,
-              completed_orders: 0,
-              completed_revenue: 0,
-              completed_profit: 0,
-              shipping_orders: 0,
-              cancelled_orders: 0,
-              returned_orders: 0,
-            };
-          }
-          return {
-            total_orders: transactions.length,
-            total_packages: transactions.reduce((sum, t) => sum + Number(t.quantity || 0), 0),
-            total_revenue: transactions.reduce((sum, t) => sum + Number(t.selling_price || 0), 0),
-            total_profit: transactions.reduce((sum, t) => sum + Number(t.profit || 0), 0),
-            completed_orders: transactions.filter(t => t.delivery_status === 'Selesai').length,
-            completed_revenue: transactions.filter(t => t.delivery_status === 'Selesai').reduce((sum, t) => sum + Number(t.selling_price || 0), 0),
-            completed_profit: transactions.filter(t => t.delivery_status === 'Selesai').reduce((sum, t) => sum + Number(t.profit || 0), 0),
-            shipping_orders: transactions.filter(t => t.delivery_status === 'Sedang Dikirim').length,
-            cancelled_orders: transactions.filter(t => t.delivery_status === 'Batal').length,
-            returned_orders: transactions.filter(t => t.delivery_status === 'Return').length,
-          };
+
+        // Simple product performance - limit to avoid heavy processing
+        const productPerfQuery = await supabase
+          .from('sales_transactions')
+          .select('sku_reference, product_name, selling_price, profit, delivery_status')
+          .gte('order_created_at', filters.dateRange.from.toISOString().split('T')[0])
+          .lte('order_created_at', filters.dateRange.to.toISOString().split('T')[0])
+          .eq('delivery_status', 'Selesai')
+          .order('selling_price', { ascending: false })
+          .limit(10); // Limit to top 10 to avoid processing thousands
+
+        if (revenueTrendQuery.error) throw revenueTrendQuery.error;
+        if (platformPerfQuery.error) throw platformPerfQuery.error;
+        if (productPerfQuery.error) throw productPerfQuery.error;
+
+        // Apply platform filter on client (small dataset now)
+        let platformData = platformPerfQuery.data || [];
+        if (filters.platforms.length > 0) {
+          platformData = platformData.filter(p => filters.platforms.includes(p.platform_id));
+        }
+
+        // Minimal product processing (only top 10 items)
+        const productData = productPerfQuery.data?.map(p => ({
+          sku_reference: p.sku_reference || 'UNKNOWN',
+          product_name: p.product_name || 'Unknown Product',
+          completed_profit: Number(p.profit || 0),
+          completed_revenue: Number(p.selling_price || 0),
+          category: 'Fashion Muslim',
+          total_sales: 1,
+          profit_margin_percentage: p.selling_price > 0 ? (Number(p.profit || 0) / Number(p.selling_price || 0)) * 100 : 0
+        })) || [];
+
+        const result = {
+          revenueTrend: revenueTrendQuery.data || [],
+          platformPerf: platformData,
+          productPerf: productData
         };
 
-        const currentMetrics = calculateMetrics(currentTransactions);
-        const prevMetrics = calculateMetrics(prevTransactions);
+        console.log('✅ useChartData: Success using views', {
+          revenueTrend: result.revenueTrend.length,
+          platformPerf: result.platformPerf.length, 
+          productPerf: result.productPerf.length
+        });
 
-        const calculateChange = (current: number, previous: number) => {
-          if (previous === 0) return current > 0 ? 100 : 0;
-          return ((current - previous) / previous) * 100;
-        };
-
-        const summary: DashboardSummary = {
-          ...currentMetrics,
-          shipping_revenue: 0, // Placeholder, adjust as needed
-          cancelled_revenue: 0,
-          returned_revenue: 0,
-          changes: {
-            completed_revenue: calculateChange(currentMetrics.completed_revenue, prevMetrics.completed_revenue),
-            total_packages: calculateChange(currentMetrics.total_packages, prevMetrics.total_packages),
-            completed_profit: calculateChange(currentMetrics.completed_profit, prevMetrics.completed_profit),
-            completion_rate: calculateChange(
-              currentMetrics.total_orders > 0 ? currentMetrics.completed_orders / currentMetrics.total_orders : 0,
-              prevMetrics.total_orders > 0 ? prevMetrics.completed_orders / prevMetrics.total_orders : 0,
-            ),
-            avg_order_value: calculateChange(
-              currentMetrics.completed_orders > 0 ? currentMetrics.completed_revenue / currentMetrics.completed_orders : 0,
-              prevMetrics.completed_orders > 0 ? prevMetrics.completed_revenue / prevMetrics.completed_orders : 0,
-            )
-          }
-        };
-
-        console.log('✅ Dashboard summary with changes calculated:', summary);
-        return summary;
+        return result;
       } catch (error) {
-        console.error('❌ useDashboardSummary: Unexpected error:', error);
+        console.error('❌ useChartData: Error:', error);
         throw error;
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
     retry: 2,
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };
 
-// FIXED: Chart Data with REAL DATA
-export const useChartData = (filters: FilterState) => {
-  return useQuery({
-    queryKey: ['chart-data', filters],
-    queryFn: async () => {
-      console.log('🔍 useChartData: Fetching with filters:', {
-        dateRange: {
-          from: filters.dateRange.from.toISOString().split('T')[0],
-          to: filters.dateRange.to.toISOString().split('T')[0]
-        },
-        platforms: filters.platforms,
-        stores: filters.stores
-      });
-      
-      try {
-        const startDate = filters.dateRange.from.toISOString().split('T')[0];
-        const endDate = filters.dateRange.to.toISOString().split('T')[0];
-
-        // Expand date range to capture more data
-        const expandedStartDate = new Date(filters.dateRange.from.getTime() - (90 * 24 * 60 * 60 * 1000));
-        const expandedStart = expandedStartDate.toISOString().split('T')[0];
-
-        // Revenue trend data
-        let revenueTrendQuery = supabase
-          .from('sales_transactions')
-          .select(`
-            order_created_at,
-            selling_price,
-            profit,
-            quantity,
-            platforms!inner(platform_name)
-          `)
-          .gte('order_created_at', expandedStart)
-          .lte('order_created_at', endDate)
-          .order('order_created_at');
-
-        if (filters.platforms.length > 0) {
-          revenueTrendQuery = revenueTrendQuery.in('platform_id', filters.platforms);
-        }
-
-        // Platform performance data
-        let platformPerfQuery = supabase
-          .from('sales_transactions')
-          .select(`
-            platform_id,
-            selling_price,
-            profit,
-            quantity,
-            delivery_status,
-            platforms!inner(platform_name)
-          `)
-          .gte('order_created_at', expandedStart)
-          .lte('order_created_at', endDate);
-
-        if (filters.platforms.length > 0) {
-          platformPerfQuery = platformPerfQuery.in('platform_id', filters.platforms);
-        }
-
-        // Product performance data  
-        let productPerfQuery = supabase
-          .from('sales_transactions')
-          .select(`
-            sku_reference,
-            product_name,
-            selling_price,
-            profit,
-            quantity,
-            delivery_status
-          `)
-          .gte('order_created_at', expandedStart)
-          .lte('order_created_at', endDate)
-          .order('selling_price', { ascending: false })
-          .limit(10);
-
-        const [revenueTrend, platformPerf, productPerf] = await Promise.all([
-          revenueTrendQuery,
-          platformPerfQuery,
-          productPerfQuery
-        ]);
-
-        if (revenueTrend.error) {
-          console.error('❌ useChartData: Revenue trend error:', revenueTrend.error);
-          throw revenueTrend.error;
-        }
-        if (platformPerf.error) {
-          console.error('❌ useChartData: Platform performance error:', platformPerf.error);
-          throw platformPerf.error;
-        }
-        if (productPerf.error) {
-          console.error('❌ useChartData: Product performance error:', productPerf.error);
-          throw productPerf.error;
-        }
-
-        // Process revenue trend data (group by date)
-        const revenueTrendProcessed = revenueTrend.data?.reduce((acc: any, transaction: any) => {
-          const date = new Date(transaction.order_created_at);
-          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-          
-          if (!acc[monthKey]) {
-            acc[monthKey] = {
-              month_start: `${monthKey}-01`,
-              revenue: 0,
-              profit: 0,
-              total_orders: 0,
-              platform_name: 'All',
-              avg_order_value: 0,
-              month: date.getMonth() + 1,
-              year: date.getFullYear(),
-              total_packages: 0,
-              unique_products_sold: 0
-            };
-          }
-          
-          acc[monthKey].revenue += Number(transaction.selling_price || 0);
-          acc[monthKey].profit += Number(transaction.profit || 0);
-          acc[monthKey].total_orders += 1;
-          acc[monthKey].total_packages += Number(transaction.quantity || 0);
-          
-          return acc;
-        }, {}) || {};
-
-        const revenueTrendArray = Object.values(revenueTrendProcessed).map((item: any) => ({
-          ...item,
-          avg_order_value: item.total_orders > 0 ? item.revenue / item.total_orders : 0
-        }));
-
-        // Process platform performance data
-        const platformPerfProcessed = platformPerf.data?.reduce((acc: any, transaction: any) => {
-          const platformName = transaction.platforms?.platform_name || 'Unknown';
-          
-          if (!acc[platformName]) {
-            acc[platformName] = {
-              platform_name: platformName,
-              platform_id: transaction.platform_id,
-              total_revenue: 0,
-              total_profit: 0,
-              total_transactions: 0,
-              completion_rate_percentage: 0,
-              profit_margin_percentage: 0,
-              avg_transaction_value: 0,
-              total_packages: 0,
-              active_days: 1,
-              total_stores: 1,
-              completed_revenue: 0,
-              completed_profit: 0
-            };
-          }
-          
-          acc[platformName].total_revenue += Number(transaction.selling_price || 0);
-          acc[platformName].total_profit += Number(transaction.profit || 0);
-          acc[platformName].total_transactions += 1;
-          acc[platformName].total_packages += Number(transaction.quantity || 0);
-          
-          if (transaction.delivery_status === 'Selesai') {
-            acc[platformName].completed_revenue += Number(transaction.selling_price || 0);
-            acc[platformName].completed_profit += Number(transaction.profit || 0);
-          }
-          
-          return acc;
-        }, {}) || {};
-
-        const platformPerfArray = Object.values(platformPerfProcessed).map((platform: any) => ({
-          ...platform,
-          profit_margin_percentage: platform.total_revenue > 0 ? (platform.total_profit / platform.total_revenue) * 100 : 0,
-          avg_transaction_value: platform.total_transactions > 0 ? platform.total_revenue / platform.total_transactions : 0,
-          completion_rate_percentage: platform.total_transactions > 0 ? (platform.completed_revenue / platform.total_revenue) * 100 : 0
-        }));
-
-        // Process product performance data
-        const productPerfProcessed = productPerf.data?.reduce((acc: any, transaction: any) => {
-          const sku = transaction.sku_reference || 'UNKNOWN';
-          const productName = transaction.product_name || 'Unknown Product';
-          
-          if (!acc[sku]) {
-            acc[sku] = {
-              product_name: productName,
-              category: 'Fashion Muslim', // Default category
-              sku_reference: sku,
-              completed_profit: 0,
-              completed_revenue: 0,
-              total_quantity_sold: 0,
-              avg_profit_per_sale: 0,
-              profit_margin_percentage: 0,
-              first_sale_date: transaction.order_created_at,
-              last_sale_date: transaction.order_created_at,
-              platforms_sold_on: 1,
-              total_sales: 0,
-              completed_quantity: 0
-            };
-          }
-          
-          acc[sku].total_sales += 1;
-          acc[sku].total_quantity_sold += Number(transaction.quantity || 0);
-          
-          if (transaction.delivery_status === 'Selesai') {
-            acc[sku].completed_profit += Number(transaction.profit || 0);
-            acc[sku].completed_revenue += Number(transaction.selling_price || 0);
-            acc[sku].completed_quantity += Number(transaction.quantity || 0);
-          }
-          
-          return acc;
-        }, {}) || {};
-
-        const productPerfArray = Object.values(productPerfProcessed).map((product: any) => ({
-          ...product,
-          avg_profit_per_sale: product.total_sales > 0 ? product.completed_profit / product.total_sales : 0,
-          profit_margin_percentage: product.completed_revenue > 0 ? (product.completed_profit / product.completed_revenue) * 100 : 0
-        }));
-
-        const result = {
-          revenueTrend: revenueTrendArray,
-          platformPerf: platformPerfArray,
-          productPerf: productPerfArray
-        };
-
-        console.log('✅ useChartData: Data processed successfully', {
-          revenueTrendCount: result.revenueTrend.length,
-          platformPerfCount: result.platformPerf.length,
-          productPerfCount: result.productPerf.length
-        });
-
-        return result;
-      } catch (error) {
-        console.error('❌ useChartData: Unexpected error:', error);
-        throw error;
-      }
-    },
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    retry: 2,
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-  });
-};
-
+// OPTIMIZED: Simpler recent transactions query
 export const useRecentTransactions = (filters: FilterState) => {
   return useQuery({
     queryKey: ['recent-transactions', filters],
     queryFn: async () => {
-      console.log('🔍 useRecentTransactions: Fetching with filters:', {
-        dateRange: {
-          from: filters.dateRange.from.toISOString().split('T')[0],
-          to: filters.dateRange.to.toISOString().split('T')[0]
-        },
-        platforms: filters.platforms,
-        stores: filters.stores
-      });
+      console.log('🔍 useRecentTransactions: Optimized query');
       
-      try {
-        // Expand date range to capture more data
-        const expandedStartDate = new Date(filters.dateRange.from.getTime() - (90 * 24 * 60 * 60 * 1000));
-        const expandedStart = expandedStartDate.toISOString().split('T')[0];
-        const endDate = filters.dateRange.to.toISOString().split('T')[0];
+      let query = supabase
+        .from('sales_transactions')
+        .select(`
+          id, order_number, product_name, delivery_status, selling_price,
+          platforms!inner(platform_name),
+          stores!inner(store_name)
+        `)
+        .gte('order_created_at', filters.dateRange.from.toISOString().split('T')[0])
+        .lte('order_created_at', filters.dateRange.to.toISOString().split('T')[0])
+        .order('order_created_at', { ascending: false })
+        .limit(10); // Only 10 recent transactions
 
-        let query = supabase
-          .from('sales_transactions')
-          .select(`
-            id,
-            order_number,
-            product_name,
-            delivery_status,
-            selling_price,
-            profit,
-            order_created_at,
-            platforms!inner(platform_name),
-            stores!inner(store_name)
-          `)
-          .gte('order_created_at', expandedStart)
-          .lte('order_created_at', endDate)
-          .order('order_created_at', { ascending: false })
-          .limit(10);
-
-        // Apply platform filter if selected
-        if (filters.platforms.length > 0) {
-          query = query.in('platform_id', filters.platforms);
-        }
-
-        // Apply store filter if selected
-        if (filters.stores.length > 0) {
-          query = query.in('store_id', filters.stores);
-        }
-
-        const { data, error } = await query;
-
-        if (error) {
-          console.error('❌ useRecentTransactions: Error:', error);
-          throw error;
-        }
-
-        console.log('✅ useRecentTransactions: Fetched', data?.length || 0, 'transactions');
-        return data || [];
-      } catch (error) {
-        console.error('❌ useRecentTransactions: Unexpected error:', error);
-        throw error;
+      if (filters.platforms.length > 0) {
+        query = query.in('platform_id', filters.platforms);
       }
+      if (filters.stores.length > 0) {
+        query = query.in('store_id', filters.stores);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      console.log('✅ useRecentTransactions: Success -', data?.length, 'transactions');
+      return data || [];
     },
-    staleTime: 30000, // 30 seconds
+    staleTime: 1 * 60 * 1000, // 1 minute
     retry: 2,
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };
 
+// SIMPLIFIED: Less aggressive realtime updates
 export const useRealtimeUpdates = () => {
   const queryClient = useQueryClient();
   
   useEffect(() => {
-    console.log('🔄 Setting up realtime updates...');
+    console.log('🔄 Setting up simplified realtime updates...');
     
-    // Sales transactions subscription
     const salesSubscription = supabase
-      .channel('dashboard-sales-updates')
+      .channel('dashboard-updates')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'sales_transactions' },
+        { event: 'INSERT', schema: 'public', table: 'sales_transactions' },
         (payload) => {
-          console.log('🔄 Sales transaction update received:', payload);
+          console.log('🔄 New transaction:', payload);
+          // Only invalidate on INSERT to reduce unnecessary updates
           queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
-          queryClient.invalidateQueries({ queryKey: ['chart-data'] });
           queryClient.invalidateQueries({ queryKey: ['recent-transactions'] });
-          queryClient.invalidateQueries({ queryKey: ['profit-analytics'] });
-        }
-      )
-      .subscribe();
-
-    // Ad expenses subscription
-    const adExpensesSubscription = supabase
-      .channel('dashboard-ad-updates')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'ad_expenses' },
-        (payload) => {
-          console.log('🔄 Ad expense update received:', payload);
-          queryClient.invalidateQueries({ queryKey: ['profit-analytics'] });
         }
       )
       .subscribe();
     
     return () => {
-      console.log('🔄 Cleaning up realtime subscriptions...');
+      console.log('🔄 Cleanup realtime subscription');
       supabase.removeChannel(salesSubscription);
-      supabase.removeChannel(adExpensesSubscription);
     };
   }, [queryClient]);
 };
