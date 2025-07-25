@@ -40,14 +40,14 @@ export const ProfitKPICards: React.FC<ProfitKPICardsProps> = ({
 
   const kpis = [
     {
-      title: 'Total Revenue',
+      title: 'Total Omset',
       value: formatCurrency(totalRevenue),
       icon: DollarSign,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50'
     },
     {
-      title: 'Net Profit',
+      title: 'Profit Bersih',
       value: formatCurrency(totalNetProfit),
       icon: TrendingUp,
       color: totalNetProfit >= 0 ? 'text-green-600' : 'text-red-600',

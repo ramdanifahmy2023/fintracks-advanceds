@@ -108,7 +108,7 @@ const Dashboard = () => {
         <div className="bg-gradient-hero rounded-2xl p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Dashboard Analytics</h1>
+              <h1 className="text-3xl font-bold mb-2">Dashboard Analitik</h1>
               <p className="text-white/80 mb-4">
                 Selamat datang kembali, {user?.full_name}! Monitor performa bisnis marketplace Anda.
               </p>
@@ -136,10 +136,10 @@ const Dashboard = () => {
 
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="overview">Ringkasan</TabsTrigger>
             <TabsTrigger value="platforms">Platform</TabsTrigger>
             <TabsTrigger value="products">Produk</TabsTrigger>
-            <TabsTrigger value="profit">Profit Analysis</TabsTrigger>
+            <TabsTrigger value="profit">Analisis Profit</TabsTrigger>
           </TabsList>
           
           <TabsContent value="overview" className="space-y-6">
@@ -173,7 +173,7 @@ const Dashboard = () => {
               {(profitLoading || storeProfitLoading || adExpensesLoading) && (
                 <div className="flex items-center justify-center py-8">
                   <div className="text-muted-foreground">
-                    Memuat data profit analytics...
+                    Memuat data analisis profit...
                   </div>
                 </div>
               )}
@@ -189,16 +189,16 @@ const Dashboard = () => {
           <CardContent>
             {transactionsLoading ? (
               <div className="flex items-center justify-center py-8">
-                <div className="text-muted-foreground">Loading...</div>
+                <div className="text-muted-foreground">Memuat...</div>
               </div>
             ) : recentTransactions && recentTransactions.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Order Number</TableHead>
-                    <TableHead>Product</TableHead>
+                    <TableHead>Nomor Order</TableHead>
+                    <TableHead>Produk</TableHead>
                     <TableHead>Platform</TableHead>
-                    <TableHead>Amount</TableHead>
+                    <TableHead>Jumlah</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>

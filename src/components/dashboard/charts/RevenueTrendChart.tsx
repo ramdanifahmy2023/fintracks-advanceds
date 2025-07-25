@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,11 +14,11 @@ export const RevenueTrendChart: React.FC<RevenueTrendChartProps> = ({ data, load
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Trend Penjualan Bulanan</CardTitle>
+          <CardTitle>Tren Penjualan Bulanan</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-80 flex items-center justify-center">
-            <div className="text-muted-foreground">Loading chart...</div>
+            <div className="text-muted-foreground">Memuat grafik...</div>
           </div>
         </CardContent>
       </Card>
@@ -39,12 +40,12 @@ export const RevenueTrendChart: React.FC<RevenueTrendChartProps> = ({ data, load
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Trend Penjualan Bulanan</CardTitle>
+          <CardTitle>Tren Penjualan Bulanan</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-80 flex items-center justify-center">
             <div className="text-center">
-              <p className="text-muted-foreground mb-2">Belum ada data trend untuk periode ini</p>
+              <p className="text-muted-foreground mb-2">Belum ada data tren untuk periode ini</p>
               <p className="text-sm text-muted-foreground">Data akan muncul setelah ada transaksi dalam periode yang dipilih</p>
             </div>
           </div>
@@ -56,9 +57,9 @@ export const RevenueTrendChart: React.FC<RevenueTrendChartProps> = ({ data, load
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Trend Penjualan Bulanan</CardTitle>
+        <CardTitle>Tren Penjualan Bulanan</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Perkembangan revenue dan profit dari waktu ke waktu
+          Perkembangan omset dan profit dari waktu ke waktu
         </p>
       </CardHeader>
       <CardContent>
@@ -78,7 +79,7 @@ export const RevenueTrendChart: React.FC<RevenueTrendChartProps> = ({ data, load
             <Tooltip 
               formatter={(value: number, name: string) => [
                 formatCurrency(value),
-                name === 'revenue' ? 'Revenue' : name === 'profit' ? 'Profit' : 'Orders'
+                name === 'revenue' ? 'Omset' : name === 'profit' ? 'Profit' : 'Pesanan'
               ]}
               labelFormatter={(label) => `Periode: ${label}`}
             />

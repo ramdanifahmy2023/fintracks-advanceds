@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +18,7 @@ export const PlatformChart: React.FC<PlatformChartProps> = ({ data, loading }) =
         </CardHeader>
         <CardContent>
           <div className="h-80 flex items-center justify-center">
-            <div className="text-muted-foreground">Loading chart...</div>
+            <div className="text-muted-foreground">Memuat grafik...</div>
           </div>
         </CardContent>
       </Card>
@@ -26,7 +27,7 @@ export const PlatformChart: React.FC<PlatformChartProps> = ({ data, loading }) =
 
   // Process data untuk chart
   const processedData = data?.map(item => ({
-    platform: item.platform_name || 'Unknown',
+    platform: item.platform_name || 'Tidak Diketahui',
     revenue: Number(item.total_revenue || 0),
     profit: Number(item.total_profit || 0),
     transactions: Number(item.total_transactions || 0),
@@ -56,7 +57,7 @@ export const PlatformChart: React.FC<PlatformChartProps> = ({ data, loading }) =
       <CardHeader>
         <CardTitle>Performa Platform</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Perbandingan revenue dan profit antar platform
+          Perbandingan omset dan profit antar platform
         </p>
       </CardHeader>
       <CardContent>
@@ -76,7 +77,7 @@ export const PlatformChart: React.FC<PlatformChartProps> = ({ data, loading }) =
             <Tooltip 
               formatter={(value: number, name: string) => [
                 formatCurrency(value),
-                name === 'revenue' ? 'Revenue' : 'Profit'
+                name === 'revenue' ? 'Omset' : 'Profit'
               ]}
               labelFormatter={(label) => `Platform: ${label}`}
             />
