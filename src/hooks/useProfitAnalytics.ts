@@ -17,22 +17,36 @@ export const useProfitAnalytics = (filters: FilterState) => {
         setIsLoading(true);
         setError(null);
         
-        console.log('🔍 Fetching profit analytics with filters:', filters);
+        console.log('🔍 Fetching optimized profit analytics with filters:', filters);
 
         const fromDate = filters.dateRange.from.toISOString().split('T')[0];
         const toDate = filters.dateRange.to.toISOString().split('T')[0];
 
-        // Fetch store profit summary with manual query
-        let storeProfitQuery = supabase
+        // Use database function for store profit summary - more efficient
+        const { data: storeProfitData, error: storeProfitError } = await supabase.rpc('get_store_summary_profit', {
+          p_from_date: fromDate,
+          p_to_date: toDate,
+          p_platform_ids: filters.platforms.length > 0 ? filters.platforms : null,
+          p_store_ids: filters.stores.length > 0 ? filters.stores : null
+        });
+
+        if (storeProfitError) {
+          console.error('Store profit RPC error:', storeProfitError);
+          throw new Error(`Database query failed: ${storeProfitError.message}`);
+        }
+
+        // Fetch monthly trend using optimized query with proper JOINs
+        let monthlyTrendQuery = supabase
           .from('sales_transactions')
           .select(`
-            store_id,
+            order_created_at,
             selling_price,
             cost_price,
             profit,
             quantity,
             delivery_status,
-            order_created_at,
+            store_id,
+            platform_id,
             stores!inner(store_name),
             platforms!inner(platform_name)
           `)
@@ -40,26 +54,35 @@ export const useProfitAnalytics = (filters: FilterState) => {
           .lte('order_created_at', toDate);
 
         if (filters.platforms.length > 0) {
-          storeProfitQuery = storeProfitQuery.in('platform_id', filters.platforms);
+          monthlyTrendQuery = monthlyTrendQuery.in('platform_id', filters.platforms);
         }
         if (filters.stores.length > 0) {
-          storeProfitQuery = storeProfitQuery.in('store_id', filters.stores);
+          monthlyTrendQuery = monthlyTrendQuery.in('store_id', filters.stores);
         }
 
-        const { data: storeData, error: storeError } = await storeProfitQuery;
+        const { data: transactionData, error: transactionError } = await monthlyTrendQuery;
 
-        if (storeError) {
-          console.error('Store profit error:', storeError);
-          throw new Error(`Store profit query failed: ${storeError.message}`);
+        if (transactionError) {
+          console.error('Monthly trend error:', transactionError);
+          throw new Error(`Monthly trend query failed: ${transactionError.message}`);
         }
 
-        // Fetch ad expenses for the same period
+        // Fetch ad expenses with proper date filtering
         let adExpenseQuery = supabase
           .from('ad_expenses')
-          .select('store_id, amount, expense_date')
+          .select(`
+            store_id,
+            platform_id,
+            amount,
+            expense_date,
+            stores!inner(store_name)
+          `)
           .gte('expense_date', fromDate)
           .lte('expense_date', toDate);
 
+        if (filters.platforms.length > 0) {
+          adExpenseQuery = adExpenseQuery.in('platform_id', filters.platforms);
+        }
         if (filters.stores.length > 0) {
           adExpenseQuery = adExpenseQuery.in('store_id', filters.stores);
         }
@@ -71,72 +94,23 @@ export const useProfitAnalytics = (filters: FilterState) => {
           throw new Error(`Ad expense query failed: ${adExpenseError.message}`);
         }
 
-        // Process store profit data with safe number conversion
-        const storeGrouped = (storeData || []).reduce((acc: any, transaction: any) => {
-          const storeId = transaction.store_id;
-          const storeName = transaction.stores?.store_name || 'Unknown Store';
-          
-          if (!acc[storeId]) {
-            acc[storeId] = {
-              store_id: storeId,
-              store_name: storeName,
-              total_revenue: 0,
-              total_cost: 0,
-              gross_profit: 0,
-              total_ad_cost: 0,
-              net_profit: 0,
-              total_completed_orders: 0,
-              overall_profit_margin: 0
-            };
-          }
-          
-          // Safe number conversion
-          const safeNumber = (value: any, fallback: number = 0): number => {
-            const num = Number(value);
-            return isNaN(num) ? fallback : num;
-          };
+        // Process monthly trend data with better date handling
+        const monthlyTrend = processOptimizedMonthlyData(transactionData || [], adExpenseData || []);
 
-          const revenue = safeNumber(transaction.selling_price) * safeNumber(transaction.quantity, 1);
-          const cost = safeNumber(transaction.cost_price) * safeNumber(transaction.quantity, 1);
-          const profit = safeNumber(transaction.profit);
-          
-          acc[storeId].total_revenue += revenue;
-          acc[storeId].total_cost += cost;
-          acc[storeId].gross_profit += profit;
-          
-          if (transaction.delivery_status === 'Selesai') {
-            acc[storeId].total_completed_orders += 1;
-          }
-          
-          return acc;
-        }, {});
+        // Convert RPC result to expected format with proper type safety
+        const storeSummaryProfit = (storeProfitData || []).map((store: any) => ({
+          store_id: store.store_id,
+          store_name: store.store_name,
+          total_revenue: safeNumber(store.total_revenue),
+          total_cost: safeNumber(store.total_cost),
+          gross_profit: safeNumber(store.gross_profit),
+          total_ad_cost: safeNumber(store.total_ad_cost),
+          net_profit: safeNumber(store.net_profit),
+          total_completed_orders: safeNumber(store.total_completed_orders),
+          overall_profit_margin: safeNumber(store.overall_profit_margin)
+        }));
 
-        // Add ad expenses to store data
-        (adExpenseData || []).forEach((expense: any) => {
-          const storeId = expense.store_id;
-          if (storeGrouped[storeId]) {
-            storeGrouped[storeId].total_ad_cost += Number(expense.amount || 0);
-          }
-        });
-
-        // Calculate net profit and profit margin
-        const storeSummaryProfit = Object.values(storeGrouped).map((store: any) => {
-          const netProfit = store.gross_profit - store.total_ad_cost;
-          const profitMargin = store.total_revenue > 0 
-            ? (netProfit / store.total_revenue) * 100 
-            : 0;
-
-          return {
-            ...store,
-            net_profit: netProfit,
-            overall_profit_margin: Number(profitMargin.toFixed(2))
-          };
-        });
-
-        // Process monthly trend data with proper date formatting
-        const monthlyTrend = processMonthlyData(storeData || [], adExpenseData || []);
-
-        // Fix: Create topPerformingStores separately to avoid circular reference
+        // Create top performing stores (avoid circular reference)
         const topPerformingStores = [...storeSummaryProfit]
           .sort((a, b) => b.net_profit - a.net_profit)
           .slice(0, 5);
@@ -144,12 +118,17 @@ export const useProfitAnalytics = (filters: FilterState) => {
         const responseData: ProfitAnalyticsData = {
           storeSummaryProfit: storeSummaryProfit,
           monthlyTrend: monthlyTrend,
-          storeProfitAnalysis: [],
+          storeProfitAnalysis: [], // Will be populated by separate query if needed
           topPerformingStores: topPerformingStores,
           profitGrowthRate: calculateGrowthRate(monthlyTrend)
         };
 
-        console.log('✅ Profit analytics data processed:', responseData);
+        console.log('✅ Optimized profit analytics data processed:', {
+          stores: responseData.storeSummaryProfit.length,
+          monthlyTrend: responseData.monthlyTrend.length,
+          topStores: responseData.topPerformingStores.length
+        });
+        
         setData(responseData);
         
       } catch (err) {
@@ -183,56 +162,72 @@ export const useProfitAnalytics = (filters: FilterState) => {
   return { data, isLoading, error };
 };
 
-// Helper function to process monthly data with proper date formatting
-function processMonthlyData(transactions: any[], adExpenses: any[]) {
-  // Group transactions by month with proper date formatting
-  const monthlyGrouped = transactions.reduce((acc: any, transaction: any) => {
-    const date = new Date(transaction.order_created_at);
-    
-    // Fix: Proper date formatting to avoid NaN-NaN-01
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1; // getMonth() returns 0-11, so add 1
-    const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-    const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
-    
-    if (!acc[monthKey]) {
-      acc[monthKey] = {
-        store_id: transaction.store_id || '',
-        store_name: transaction.stores?.store_name || 'Unknown Store',
-        month: monthStart,
-        monthly_revenue: 0,
-        monthly_gross_profit: 0,
-        monthly_ad_cost: 0,
-        monthly_net_profit: 0,
-        monthly_orders: 0
-      };
-    }
-    
-    const safeNumber = (value: any, fallback: number = 0): number => {
-      const num = Number(value);
-      return isNaN(num) ? fallback : num;
-    };
+// Helper function with improved performance and error handling
+function processOptimizedMonthlyData(transactions: any[], adExpenses: any[]) {
+  const monthlyGrouped: { [key: string]: any } = {};
 
-    acc[monthKey].monthly_revenue += safeNumber(transaction.selling_price) * safeNumber(transaction.quantity, 1);
-    acc[monthKey].monthly_gross_profit += safeNumber(transaction.profit);
-    acc[monthKey].monthly_orders += 1;
-    
-    return acc;
-  }, {});
+  // Process transactions
+  transactions.forEach((transaction) => {
+    try {
+      const date = new Date(transaction.order_created_at);
+      
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date in transaction:', transaction.order_created_at);
+        return;
+      }
 
-  // Add ad expenses to monthly data
-  adExpenses.forEach((expense: any) => {
-    const date = new Date(expense.expense_date);
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-    
-    if (monthlyGrouped[monthKey]) {
-      monthlyGrouped[monthKey].monthly_ad_cost += Number(expense.amount || 0);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+      const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+      
+      if (!monthlyGrouped[monthKey]) {
+        monthlyGrouped[monthKey] = {
+          store_id: transaction.store_id || '',
+          store_name: transaction.stores?.store_name || 'Unknown Store',
+          month: monthStart,
+          monthly_revenue: 0,
+          monthly_gross_profit: 0,
+          monthly_ad_cost: 0,
+          monthly_net_profit: 0,
+          monthly_orders: 0
+        };
+      }
+      
+      const revenue = safeNumber(transaction.selling_price) * safeNumber(transaction.quantity, 1);
+      const profit = safeNumber(transaction.profit);
+      
+      monthlyGrouped[monthKey].monthly_revenue += revenue;
+      monthlyGrouped[monthKey].monthly_gross_profit += profit;
+      monthlyGrouped[monthKey].monthly_orders += 1;
+    } catch (error) {
+      console.warn('Error processing transaction:', error, transaction);
     }
   });
 
-  // Calculate net profit for each month and return sorted array
+  // Process ad expenses with better date handling
+  adExpenses.forEach((expense) => {
+    try {
+      const date = new Date(expense.expense_date);
+      
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid expense date:', expense.expense_date);
+        return;
+      }
+
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+      
+      if (monthlyGrouped[monthKey]) {
+        monthlyGrouped[monthKey].monthly_ad_cost += safeNumber(expense.amount);
+      }
+    } catch (error) {
+      console.warn('Error processing expense:', error, expense);
+    }
+  });
+
+  // Calculate net profit and return sorted array
   return Object.values(monthlyGrouped)
     .map((item: any) => ({
       ...item,
@@ -241,17 +236,33 @@ function processMonthlyData(transactions: any[], adExpenses: any[]) {
     .sort((a: any, b: any) => new Date(a.month).getTime() - new Date(b.month).getTime());
 }
 
+// Improved growth rate calculation
 function calculateGrowthRate(monthlyData: any[]): number {
-  if (monthlyData.length < 2) return 0;
+  if (!Array.isArray(monthlyData) || monthlyData.length < 2) {
+    return 0;
+  }
   
-  // Sort by date to ensure proper comparison
-  const sortedData = monthlyData.sort((a, b) => 
-    new Date(b.month).getTime() - new Date(a.month).getTime()
-  );
-  
-  const latest = sortedData[0]?.monthly_net_profit || 0;
-  const previous = sortedData[1]?.monthly_net_profit || 0;
-  
-  if (previous === 0) return latest > 0 ? 100 : 0;
-  return Number(((latest - previous) / Math.abs(previous) * 100).toFixed(2));
+  try {
+    const sortedData = [...monthlyData].sort((a, b) => 
+      new Date(b.month).getTime() - new Date(a.month).getTime()
+    );
+    
+    const latest = safeNumber(sortedData[0]?.monthly_net_profit);
+    const previous = safeNumber(sortedData[1]?.monthly_net_profit);
+    
+    if (previous === 0) return latest > 0 ? 100 : 0;
+    
+    const growthRate = ((latest - previous) / Math.abs(previous)) * 100;
+    return safeNumber(growthRate, 0);
+  } catch (error) {
+    console.warn('Error calculating growth rate:', error);
+    return 0;
+  }
+}
+
+// Safe number conversion utility
+function safeNumber(value: any, fallback: number = 0): number {
+  if (value === null || value === undefined) return fallback;
+  const num = Number(value);
+  return isNaN(num) ? fallback : num;
 }

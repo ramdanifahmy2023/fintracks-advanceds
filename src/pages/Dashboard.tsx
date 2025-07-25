@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,8 +21,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/formatters';
 
-// CONSOLIDATED PROFIT ANALYTICS IMPORTS
+// OPTIMIZED PROFIT ANALYTICS IMPORTS
 import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
+import { useStoreProfitSummary, useAdExpensesFiltered } from '@/hooks/useProfitQueries';
 import { ProfitAnalyticsSection } from '@/components/analytics/ProfitAnalyticsSection';
 import { AnalyticsErrorBoundary } from '@/components/analytics/AnalyticsErrorBoundary';
 
@@ -63,15 +63,17 @@ const Dashboard = () => {
   const { data: chartData, isLoading: chartLoading, error: chartError } = useChartData(filters);
   const { data: recentTransactions, isLoading: transactionsLoading, error: transactionsError } = useRecentTransactions(filters);
   
-  // PROFIT ANALYTICS WITH AD EXPENSES
+  // OPTIMIZED PROFIT ANALYTICS WITH SEPARATE QUERIES
   const { data: profitData, isLoading: profitLoading, error: profitError } = useProfitAnalytics(filters);
+  const { data: storeProfitData, isLoading: storeProfitLoading } = useStoreProfitSummary(filters);
+  const { data: adExpensesData, isLoading: adExpensesLoading } = useAdExpensesFiltered(filters);
 
   const handleFiltersChange = useCallback((newFilters: FilterState) => {
-    console.log('📊 Dashboard: All filters changed:', newFilters);
+    console.log('📊 Dashboard: Optimized filters changed:', newFilters);
     setFilters(newFilters);
   }, []);
 
-  const hasError = summaryError || chartError;
+  const hasError = summaryError || chartError || profitError;
 
   if (hasError) {
     return (
@@ -79,7 +81,7 @@ const Dashboard = () => {
         <GlobalFilters 
           filters={filters} 
           onFiltersChange={handleFiltersChange}
-          loading={summaryLoading || chartLoading}
+          loading={summaryLoading || chartLoading || profitLoading}
         />
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
@@ -97,7 +99,7 @@ const Dashboard = () => {
       <GlobalFilters 
         filters={filters} 
         onFiltersChange={handleFiltersChange}
-        loading={summaryLoading || chartLoading}
+        loading={summaryLoading || chartLoading || profitLoading}
       />
 
       <div className="space-y-6 px-4 pb-6">
@@ -155,21 +157,23 @@ const Dashboard = () => {
             </div>
           </TabsContent>
 
-          {/* PROFIT ANALYSIS TAB WITH AD EXPENSES */}
+          {/* OPTIMIZED PROFIT ANALYSIS TAB */}
           <TabsContent value="profit" className="space-y-6">
             <AnalyticsErrorBoundary error={profitError}>
               {profitData && (
                 <ProfitAnalyticsSection
                   data={profitData}
-                  loading={profitLoading}
+                  loading={profitLoading || storeProfitLoading || adExpensesLoading}
                   showKPIs={true}
                   showTable={true}
-                  title="Analisis Profit dengan Biaya Iklan"
+                  title="Analisis Profit Terintegrasi"
                 />
               )}
-              {profitLoading && (
+              {(profitLoading || storeProfitLoading || adExpensesLoading) && (
                 <div className="flex items-center justify-center py-8">
-                  <div className="text-muted-foreground">Loading profit data...</div>
+                  <div className="text-muted-foreground">
+                    Memuat data profit analytics yang dioptimasi...
+                  </div>
                 </div>
               )}
             </AnalyticsErrorBoundary>
