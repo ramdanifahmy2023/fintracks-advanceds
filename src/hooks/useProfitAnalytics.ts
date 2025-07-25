@@ -17,26 +17,13 @@ export const useProfitAnalytics = (filters: FilterState) => {
         setIsLoading(true);
         setError(null);
         
-        console.log('🔍 Fetching optimized profit analytics with filters:', filters);
+        console.log('🔍 Fetching profit analytics with filters:', filters);
 
         const fromDate = filters.dateRange.from.toISOString().split('T')[0];
         const toDate = filters.dateRange.to.toISOString().split('T')[0];
 
-        // Use database function for store profit summary - more efficient
-        const { data: storeProfitData, error: storeProfitError } = await supabase.rpc('get_store_summary_profit', {
-          p_from_date: fromDate,
-          p_to_date: toDate,
-          p_platform_ids: filters.platforms.length > 0 ? filters.platforms : null,
-          p_store_ids: filters.stores.length > 0 ? filters.stores : null
-        });
-
-        if (storeProfitError) {
-          console.error('Store profit RPC error:', storeProfitError);
-          throw new Error(`Database query failed: ${storeProfitError.message}`);
-        }
-
-        // Fetch monthly trend using optimized query with proper JOINs
-        let monthlyTrendQuery = supabase
+        // Fetch transactions with proper filtering
+        let transactionQuery = supabase
           .from('sales_transactions')
           .select(`
             order_created_at,
@@ -54,20 +41,19 @@ export const useProfitAnalytics = (filters: FilterState) => {
           .lte('order_created_at', toDate);
 
         if (filters.platforms.length > 0) {
-          monthlyTrendQuery = monthlyTrendQuery.in('platform_id', filters.platforms);
+          transactionQuery = transactionQuery.in('platform_id', filters.platforms);
         }
         if (filters.stores.length > 0) {
-          monthlyTrendQuery = monthlyTrendQuery.in('store_id', filters.stores);
+          transactionQuery = transactionQuery.in('store_id', filters.stores);
         }
 
-        const { data: transactionData, error: transactionError } = await monthlyTrendQuery;
+        const { data: transactionData, error: transactionError } = await transactionQuery;
 
         if (transactionError) {
-          console.error('Monthly trend error:', transactionError);
-          throw new Error(`Monthly trend query failed: ${transactionError.message}`);
+          throw new Error(`Transaction query failed: ${transactionError.message}`);
         }
 
-        // Fetch ad expenses with proper date filtering
+        // Fetch ad expenses with proper filtering
         let adExpenseQuery = supabase
           .from('ad_expenses')
           .select(`
@@ -90,46 +76,19 @@ export const useProfitAnalytics = (filters: FilterState) => {
         const { data: adExpenseData, error: adExpenseError } = await adExpenseQuery;
 
         if (adExpenseError) {
-          console.error('Ad expense error:', adExpenseError);
           throw new Error(`Ad expense query failed: ${adExpenseError.message}`);
         }
 
-        // Process monthly trend data with better date handling
-        const monthlyTrend = processOptimizedMonthlyData(transactionData || [], adExpenseData || []);
+        // Process data safely
+        const processedData = processTransactionData(transactionData || [], adExpenseData || []);
 
-        // Convert RPC result to expected format with proper type safety
-        const storeSummaryProfit = (storeProfitData || []).map((store: any) => ({
-          store_id: store.store_id,
-          store_name: store.store_name,
-          total_revenue: safeNumber(store.total_revenue),
-          total_cost: safeNumber(store.total_cost),
-          gross_profit: safeNumber(store.gross_profit),
-          total_ad_cost: safeNumber(store.total_ad_cost),
-          net_profit: safeNumber(store.net_profit),
-          total_completed_orders: safeNumber(store.total_completed_orders),
-          overall_profit_margin: safeNumber(store.overall_profit_margin)
-        }));
-
-        // Create top performing stores (avoid circular reference)
-        const topPerformingStores = [...storeSummaryProfit]
-          .sort((a, b) => b.net_profit - a.net_profit)
-          .slice(0, 5);
-
-        const responseData: ProfitAnalyticsData = {
-          storeSummaryProfit: storeSummaryProfit,
-          monthlyTrend: monthlyTrend,
-          storeProfitAnalysis: [], // Will be populated by separate query if needed
-          topPerformingStores: topPerformingStores,
-          profitGrowthRate: calculateGrowthRate(monthlyTrend)
-        };
-
-        console.log('✅ Optimized profit analytics data processed:', {
-          stores: responseData.storeSummaryProfit.length,
-          monthlyTrend: responseData.monthlyTrend.length,
-          topStores: responseData.topPerformingStores.length
+        console.log('✅ Profit analytics data processed:', {
+          transactions: transactionData?.length || 0,
+          adExpenses: adExpenseData?.length || 0,
+          stores: processedData.storeSummaryProfit.length
         });
         
-        setData(responseData);
+        setData(processedData);
         
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
@@ -162,9 +121,88 @@ export const useProfitAnalytics = (filters: FilterState) => {
   return { data, isLoading, error };
 };
 
-// Helper function with improved performance and error handling
-function processOptimizedMonthlyData(transactions: any[], adExpenses: any[]) {
-  const monthlyGrouped: { [key: string]: any } = {};
+// Helper function to process transaction data
+function processTransactionData(transactions: any[], adExpenses: any[]): ProfitAnalyticsData {
+  // Group by store for store summary
+  const storeGroups: { [key: string]: any } = {};
+  
+  transactions.forEach((transaction) => {
+    try {
+      const storeId = transaction.store_id;
+      if (!storeGroups[storeId]) {
+        storeGroups[storeId] = {
+          store_id: storeId,
+          store_name: transaction.stores?.store_name || 'Unknown Store',
+          total_revenue: 0,
+          total_cost: 0,
+          gross_profit: 0,
+          total_ad_cost: 0,
+          net_profit: 0,
+          total_completed_orders: 0,
+          overall_profit_margin: 0
+        };
+      }
+      
+      const revenue = safeNumber(transaction.selling_price) * safeNumber(transaction.quantity, 1);
+      const cost = safeNumber(transaction.cost_price) * safeNumber(transaction.quantity, 1);
+      const profit = safeNumber(transaction.profit);
+      
+      storeGroups[storeId].total_revenue += revenue;
+      storeGroups[storeId].total_cost += cost;
+      storeGroups[storeId].gross_profit += profit;
+      
+      if (transaction.delivery_status === 'Selesai') {
+        storeGroups[storeId].total_completed_orders += 1;
+      }
+    } catch (error) {
+      console.warn('Error processing transaction:', error, transaction);
+    }
+  });
+
+  // Add ad expenses to stores
+  adExpenses.forEach((expense) => {
+    try {
+      const storeId = expense.store_id;
+      if (storeGroups[storeId]) {
+        storeGroups[storeId].total_ad_cost += safeNumber(expense.amount);
+      }
+    } catch (error) {
+      console.warn('Error processing expense:', error, expense);
+    }
+  });
+
+  // Calculate net profit and margins
+  const storeSummaryProfit = Object.values(storeGroups).map((store: any) => {
+    const netProfit = store.gross_profit - store.total_ad_cost;
+    const profitMargin = store.total_revenue > 0 ? (netProfit / store.total_revenue) * 100 : 0;
+    
+    return {
+      ...store,
+      net_profit: netProfit,
+      overall_profit_margin: safeNumber(profitMargin, 0)
+    };
+  });
+
+  // Process monthly trend data
+  const monthlyTrend = processMonthlyData(transactions, adExpenses);
+
+  // Create top performing stores (no circular reference)
+  const topPerformingStores = [...storeSummaryProfit]
+    .sort((a, b) => b.net_profit - a.net_profit)
+    .slice(0, 5);
+
+  return {
+    storeSummaryProfit,
+    monthlyTrend,
+    storeProfitAnalysis: [], // Will be populated by separate query if needed
+    topPerformingStores,
+    profitGrowthRate: calculateGrowthRate(monthlyTrend)
+  };
+}
+
+// Helper function to process monthly data
+function processMonthlyData(transactions: any[], adExpenses: any[]) {
+  const monthlyGroups: { [key: string]: any } = {};
 
   // Process transactions
   transactions.forEach((transaction) => {
@@ -179,13 +217,12 @@ function processOptimizedMonthlyData(transactions: any[], adExpenses: any[]) {
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
       const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-      const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
       
-      if (!monthlyGrouped[monthKey]) {
-        monthlyGrouped[monthKey] = {
+      if (!monthlyGroups[monthKey]) {
+        monthlyGroups[monthKey] = {
           store_id: transaction.store_id || '',
           store_name: transaction.stores?.store_name || 'Unknown Store',
-          month: monthStart,
+          month: `${year}-${String(month).padStart(2, '0')}-01`,
           monthly_revenue: 0,
           monthly_gross_profit: 0,
           monthly_ad_cost: 0,
@@ -197,15 +234,15 @@ function processOptimizedMonthlyData(transactions: any[], adExpenses: any[]) {
       const revenue = safeNumber(transaction.selling_price) * safeNumber(transaction.quantity, 1);
       const profit = safeNumber(transaction.profit);
       
-      monthlyGrouped[monthKey].monthly_revenue += revenue;
-      monthlyGrouped[monthKey].monthly_gross_profit += profit;
-      monthlyGrouped[monthKey].monthly_orders += 1;
+      monthlyGroups[monthKey].monthly_revenue += revenue;
+      monthlyGroups[monthKey].monthly_gross_profit += profit;
+      monthlyGroups[monthKey].monthly_orders += 1;
     } catch (error) {
       console.warn('Error processing transaction:', error, transaction);
     }
   });
 
-  // Process ad expenses with better date handling
+  // Process ad expenses
   adExpenses.forEach((expense) => {
     try {
       const date = new Date(expense.expense_date);
@@ -219,8 +256,8 @@ function processOptimizedMonthlyData(transactions: any[], adExpenses: any[]) {
       const month = date.getMonth() + 1;
       const monthKey = `${year}-${String(month).padStart(2, '0')}`;
       
-      if (monthlyGrouped[monthKey]) {
-        monthlyGrouped[monthKey].monthly_ad_cost += safeNumber(expense.amount);
+      if (monthlyGroups[monthKey]) {
+        monthlyGroups[monthKey].monthly_ad_cost += safeNumber(expense.amount);
       }
     } catch (error) {
       console.warn('Error processing expense:', error, expense);
@@ -228,7 +265,7 @@ function processOptimizedMonthlyData(transactions: any[], adExpenses: any[]) {
   });
 
   // Calculate net profit and return sorted array
-  return Object.values(monthlyGrouped)
+  return Object.values(monthlyGroups)
     .map((item: any) => ({
       ...item,
       monthly_net_profit: item.monthly_gross_profit - item.monthly_ad_cost
@@ -236,7 +273,7 @@ function processOptimizedMonthlyData(transactions: any[], adExpenses: any[]) {
     .sort((a: any, b: any) => new Date(a.month).getTime() - new Date(b.month).getTime());
 }
 
-// Improved growth rate calculation
+// Helper function to calculate growth rate
 function calculateGrowthRate(monthlyData: any[]): number {
   if (!Array.isArray(monthlyData) || monthlyData.length < 2) {
     return 0;

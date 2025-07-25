@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,7 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/formatters';
 
-// OPTIMIZED PROFIT ANALYTICS IMPORTS
+// FIXED PROFIT ANALYTICS IMPORTS
 import { useProfitAnalytics } from '@/hooks/useProfitAnalytics';
 import { useStoreProfitSummary, useAdExpensesFiltered } from '@/hooks/useProfitQueries';
 import { ProfitAnalyticsSection } from '@/components/analytics/ProfitAnalyticsSection';
@@ -63,13 +64,13 @@ const Dashboard = () => {
   const { data: chartData, isLoading: chartLoading, error: chartError } = useChartData(filters);
   const { data: recentTransactions, isLoading: transactionsLoading, error: transactionsError } = useRecentTransactions(filters);
   
-  // OPTIMIZED PROFIT ANALYTICS WITH SEPARATE QUERIES
+  // FIXED PROFIT ANALYTICS WITH DIRECT TABLE QUERIES
   const { data: profitData, isLoading: profitLoading, error: profitError } = useProfitAnalytics(filters);
   const { data: storeProfitData, isLoading: storeProfitLoading } = useStoreProfitSummary(filters);
   const { data: adExpensesData, isLoading: adExpensesLoading } = useAdExpensesFiltered(filters);
 
   const handleFiltersChange = useCallback((newFilters: FilterState) => {
-    console.log('📊 Dashboard: Optimized filters changed:', newFilters);
+    console.log('📊 Dashboard: Filters changed:', newFilters);
     setFilters(newFilters);
   }, []);
 
@@ -157,7 +158,7 @@ const Dashboard = () => {
             </div>
           </TabsContent>
 
-          {/* OPTIMIZED PROFIT ANALYSIS TAB */}
+          {/* FIXED PROFIT ANALYSIS TAB */}
           <TabsContent value="profit" className="space-y-6">
             <AnalyticsErrorBoundary error={profitError}>
               {profitData && (
@@ -172,7 +173,7 @@ const Dashboard = () => {
               {(profitLoading || storeProfitLoading || adExpensesLoading) && (
                 <div className="flex items-center justify-center py-8">
                   <div className="text-muted-foreground">
-                    Memuat data profit analytics yang dioptimasi...
+                    Memuat data profit analytics...
                   </div>
                 </div>
               )}
