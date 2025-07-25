@@ -57,6 +57,7 @@ export const ProfitAnalyticsSection: React.FC<ProfitAnalyticsSectionProps> = ({
     );
   }
 
+  // Fix: Better data validation and error handling
   if (!data || !data.storeSummaryProfit || data.storeSummaryProfit.length === 0) {
     return (
       <Card>
@@ -75,13 +76,29 @@ export const ProfitAnalyticsSection: React.FC<ProfitAnalyticsSectionProps> = ({
     );
   }
 
-  // Calculate totals for KPIs
-  const totalRevenue = data.storeSummaryProfit.reduce((sum, store) => sum + Number(store.total_revenue || 0), 0);
-  const totalGrossProfit = data.storeSummaryProfit.reduce((sum, store) => sum + Number(store.gross_profit || 0), 0);
-  const totalAdCost = data.storeSummaryProfit.reduce((sum, store) => sum + Number(store.total_ad_cost || 0), 0);
-  const totalNetProfit = data.storeSummaryProfit.reduce((sum, store) => sum + Number(store.net_profit || 0), 0);
+  // Safe number conversion helper
+  const safeNumber = (value: any, fallback: number = 0): number => {
+    const num = Number(value);
+    return isNaN(num) ? fallback : num;
+  };
+
+  // Calculate totals for KPIs with error handling
+  let totalRevenue = 0;
+  let totalGrossProfit = 0;
+  let totalAdCost = 0;
+  let totalNetProfit = 0;
+
+  try {
+    totalRevenue = data.storeSummaryProfit.reduce((sum, store) => sum + safeNumber(store.total_revenue), 0);
+    totalGrossProfit = data.storeSummaryProfit.reduce((sum, store) => sum + safeNumber(store.gross_profit), 0);
+    totalAdCost = data.storeSummaryProfit.reduce((sum, store) => sum + safeNumber(store.total_ad_cost), 0);
+    totalNetProfit = data.storeSummaryProfit.reduce((sum, store) => sum + safeNumber(store.net_profit), 0);
+  } catch (error) {
+    console.error('Error calculating profit totals:', error);
+  }
+
   const avgProfitMargin = data.storeSummaryProfit.length > 0 
-    ? data.storeSummaryProfit.reduce((sum, store) => sum + Number(store.overall_profit_margin || 0), 0) / data.storeSummaryProfit.length 
+    ? data.storeSummaryProfit.reduce((sum, store) => sum + safeNumber(store.overall_profit_margin), 0) / data.storeSummaryProfit.length 
     : 0;
 
   const kpis = [
@@ -174,16 +191,16 @@ export const ProfitAnalyticsSection: React.FC<ProfitAnalyticsSectionProps> = ({
                         {store.store_name}
                       </TableCell>
                       <TableCell>
-                        {formatCurrency(Number(store.total_revenue || 0))}
+                        {formatCurrency(safeNumber(store.total_revenue))}
                       </TableCell>
                       <TableCell className="text-green-600">
-                        {formatCurrency(Number(store.gross_profit || 0))}
+                        {formatCurrency(safeNumber(store.gross_profit))}
                       </TableCell>
                       <TableCell className="text-red-600 font-medium">
-                        {Number(store.total_ad_cost || 0) > 0 ? (
+                        {safeNumber(store.total_ad_cost) > 0 ? (
                           <span className="flex items-center gap-1">
                             <Target className="h-3 w-3" />
-                            -{formatCurrency(Number(store.total_ad_cost || 0))}
+                            -{formatCurrency(safeNumber(store.total_ad_cost))}
                           </span>
                         ) : (
                           <span className="text-gray-400">Rp 0</span>
@@ -191,32 +208,32 @@ export const ProfitAnalyticsSection: React.FC<ProfitAnalyticsSectionProps> = ({
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          {Number(store.net_profit || 0) >= 0 ? (
+                          {safeNumber(store.net_profit) >= 0 ? (
                             <TrendingUp className="h-4 w-4 text-green-600" />
                           ) : (
                             <TrendingDown className="h-4 w-4 text-red-600" />
                           )}
-                          <span className={Number(store.net_profit || 0) >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
-                            {formatCurrency(Number(store.net_profit || 0))}
+                          <span className={safeNumber(store.net_profit) >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                            {formatCurrency(safeNumber(store.net_profit))}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge 
-                          variant={Number(store.overall_profit_margin || 0) >= 0 ? 'default' : 'destructive'}
+                          variant={safeNumber(store.overall_profit_margin) >= 0 ? 'default' : 'destructive'}
                         >
-                          {Number(store.overall_profit_margin || 0).toFixed(1)}%
+                          {safeNumber(store.overall_profit_margin).toFixed(1)}%
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <span className="font-medium">{Number(store.total_completed_orders || 0)}</span>
+                        <span className="font-medium">{safeNumber(store.total_completed_orders)}</span>
                       </TableCell>
                       <TableCell>
                         <Badge 
-                          variant={Number(store.net_profit || 0) >= 0 ? 'default' : 'secondary'}
-                          className={Number(store.net_profit || 0) >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
+                          variant={safeNumber(store.net_profit) >= 0 ? 'default' : 'secondary'}
+                          className={safeNumber(store.net_profit) >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
                         >
-                          {Number(store.net_profit || 0) >= 0 ? 'Profit' : 'Loss'}
+                          {safeNumber(store.net_profit) >= 0 ? 'Profit' : 'Loss'}
                         </Badge>
                       </TableCell>
                     </TableRow>

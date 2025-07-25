@@ -52,13 +52,24 @@ export const SummaryCards = ({ data, profitData, loading, profitLoading }: Summa
     let netProfit = safeNumber(data.completed_profit);
     let totalAdCost = 0;
     
+    // Fix: Better error handling for profitData and avoid loading state issues
     if (profitData && profitData.storeSummaryProfit && !profitLoading) {
-      totalAdCost = profitData.storeSummaryProfit.reduce((sum, store) => 
-        sum + safeNumber(store.total_ad_cost), 0
-      );
-      netProfit = profitData.storeSummaryProfit.reduce((sum, store) => 
-        sum + safeNumber(store.net_profit), 0
-      );
+      try {
+        totalAdCost = profitData.storeSummaryProfit.reduce((sum, store) => {
+          const adCost = safeNumber(store.total_ad_cost);
+          return sum + adCost;
+        }, 0);
+        
+        netProfit = profitData.storeSummaryProfit.reduce((sum, store) => {
+          const storeNetProfit = safeNumber(store.net_profit);
+          return sum + storeNetProfit;
+        }, 0);
+      } catch (error) {
+        console.warn('Error calculating profit data:', error);
+        // Fallback to basic completed profit if profit data calculation fails
+        netProfit = safeNumber(data.completed_profit);
+        totalAdCost = 0;
+      }
     }
 
     // Calculate completion rate
@@ -67,11 +78,16 @@ export const SummaryCards = ({ data, profitData, loading, profitLoading }: Summa
     // Calculate average order value
     const avgOrderValue = completedOrders > 0 ? completedRevenue / completedOrders : 0;
 
-    // Safe change calculation
+    // Safe change calculation with better error handling
     const getChangeValue = (key: keyof NonNullable<DashboardSummary['changes']>, fallback: number = 0): number => {
-      if (!data.changes || !data.changes[key]) return fallback;
-      const value = Number(data.changes[key]);
-      return isNaN(value) ? fallback : value;
+      try {
+        if (!data.changes || !data.changes[key]) return fallback;
+        const value = Number(data.changes[key]);
+        return isNaN(value) ? fallback : value;
+      } catch (error) {
+        console.warn(`Error getting change value for ${key}:`, error);
+        return fallback;
+      }
     };
 
     return [

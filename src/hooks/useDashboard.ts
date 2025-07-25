@@ -1,3 +1,4 @@
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { FilterState, DashboardSummary, ChartData } from '@/types/dashboard';
@@ -52,7 +53,7 @@ export const useStores = (platformIds: string[]) => {
   });
 };
 
-// OPTIMIZED: Use existing database function
+// OPTIMIZED: Use existing database function with better error handling
 export const useDashboardSummary = (filters: FilterState) => {
   return useQuery({
     queryKey: ['dashboard-summary', filters],
@@ -69,7 +70,34 @@ export const useDashboardSummary = (filters: FilterState) => {
         
         if (error) throw error;
         
-        // Simple summary without heavy change calculation
+        // Ensure we have valid data structure
+        if (!data || data.length === 0) {
+          // Return default empty structure
+          return {
+            total_orders: 0,
+            total_packages: 0,
+            total_revenue: 0,
+            total_profit: 0,
+            completed_orders: 0,
+            completed_revenue: 0,
+            completed_profit: 0,
+            shipping_orders: 0,
+            shipping_revenue: 0,
+            cancelled_orders: 0,
+            cancelled_revenue: 0,
+            returned_orders: 0,
+            returned_revenue: 0,
+            changes: {
+              completed_revenue: 0,
+              total_packages: 0,
+              completed_profit: 0,
+              completion_rate: 0,
+              avg_order_value: 0
+            }
+          };
+        }
+
+        // Simple summary with safe data access
         const summary: DashboardSummary = {
           ...data[0],
           changes: {
@@ -94,7 +122,7 @@ export const useDashboardSummary = (filters: FilterState) => {
   });
 };
 
-// OPTIMIZED: Use existing views
+// OPTIMIZED: Use existing views with better error handling
 export const useChartData = (filters: FilterState) => {
   return useQuery({
     queryKey: ['chart-data', filters],
@@ -130,10 +158,10 @@ export const useChartData = (filters: FilterState) => {
         if (platformAnalyticsQuery.error) throw platformAnalyticsQuery.error;
         if (productPerfQuery.error) throw productPerfQuery.error;
 
-        // Apply platform filter on client side (small dataset)
+        // Apply platform filter on client side (small dataset) with null checks
         let platformData = platformAnalyticsQuery.data || [];
         if (filters.platforms.length > 0) {
-          platformData = platformData.filter(p => filters.platforms.includes(p.platform_id));
+          platformData = platformData.filter(p => p.platform_id && filters.platforms.includes(p.platform_id));
         }
 
         const result = {
@@ -160,15 +188,15 @@ export const useChartData = (filters: FilterState) => {
   });
 };
 
-// FIXED: Recent transactions with proper error handling
+// FIXED: Recent transactions with proper error handling and null checks
 export const useRecentTransactions = (filters: FilterState) => {
   return useQuery({
     queryKey: ['recent-transactions', filters],
     queryFn: async () => {
-      console.log('🔍 useRecentTransactions: Simple query');
+      console.log('🔍 useRecentTransactions: Simple query with filters');
       
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('sales_transactions')
           .select(`
             id,
@@ -181,7 +209,17 @@ export const useRecentTransactions = (filters: FilterState) => {
             stores(store_name)
           `)
           .gte('order_created_at', filters.dateRange.from.toISOString().split('T')[0])
-          .lte('order_created_at', filters.dateRange.to.toISOString().split('T')[0])
+          .lte('order_created_at', filters.dateRange.to.toISOString().split('T')[0]);
+
+        // Apply platform and store filters
+        if (filters.platforms.length > 0) {
+          query = query.in('platform_id', filters.platforms);
+        }
+        if (filters.stores.length > 0) {
+          query = query.in('store_id', filters.stores);
+        }
+
+        const { data, error } = await query
           .order('order_created_at', { ascending: false })
           .limit(10);
 
@@ -202,12 +240,12 @@ export const useRecentTransactions = (filters: FilterState) => {
   });
 };
 
-// SIMPLIFIED: Less aggressive realtime updates
+// Enhanced realtime updates with ad_expenses table support
 export const useRealtimeUpdates = () => {
   const queryClient = useQueryClient();
   
   useEffect(() => {
-    console.log('🔄 Setting up simplified realtime updates...');
+    console.log('🔄 Setting up enhanced realtime updates...');
     
     const salesSubscription = supabase
       .channel('dashboard-updates')
@@ -215,9 +253,19 @@ export const useRealtimeUpdates = () => {
         { event: 'INSERT', schema: 'public', table: 'sales_transactions' },
         (payload) => {
           console.log('🔄 New transaction:', payload);
-          // Only invalidate on INSERT to reduce unnecessary updates
+          // Invalidate relevant queries
           queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
           queryClient.invalidateQueries({ queryKey: ['recent-transactions'] });
+          queryClient.invalidateQueries({ queryKey: ['chart-data'] });
+        }
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'ad_expenses' },
+        (payload) => {
+          console.log('🔄 Ad expense changed:', payload);
+          // Invalidate profit analytics when ad expenses change
+          queryClient.invalidateQueries({ queryKey: ['profit-analytics'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
         }
       )
       .subscribe();

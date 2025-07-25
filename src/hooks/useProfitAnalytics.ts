@@ -32,6 +32,7 @@ export const useProfitAnalytics = (filters: FilterState) => {
             profit,
             quantity,
             delivery_status,
+            order_created_at,
             stores!inner(store_name),
             platforms!inner(platform_name)
           `)
@@ -70,7 +71,7 @@ export const useProfitAnalytics = (filters: FilterState) => {
           throw new Error(`Ad expense query failed: ${adExpenseError.message}`);
         }
 
-        // Process store profit data
+        // Process store profit data with safe number conversion
         const storeGrouped = (storeData || []).reduce((acc: any, transaction: any) => {
           const storeId = transaction.store_id;
           const storeName = transaction.stores?.store_name || 'Unknown Store';
@@ -89,9 +90,15 @@ export const useProfitAnalytics = (filters: FilterState) => {
             };
           }
           
-          const revenue = Number(transaction.selling_price || 0) * Number(transaction.quantity || 1);
-          const cost = Number(transaction.cost_price || 0) * Number(transaction.quantity || 1);
-          const profit = Number(transaction.profit || 0);
+          // Safe number conversion
+          const safeNumber = (value: any, fallback: number = 0): number => {
+            const num = Number(value);
+            return isNaN(num) ? fallback : num;
+          };
+
+          const revenue = safeNumber(transaction.selling_price) * safeNumber(transaction.quantity, 1);
+          const cost = safeNumber(transaction.cost_price) * safeNumber(transaction.quantity, 1);
+          const profit = safeNumber(transaction.profit);
           
           acc[storeId].total_revenue += revenue;
           acc[storeId].total_cost += cost;
@@ -126,14 +133,19 @@ export const useProfitAnalytics = (filters: FilterState) => {
           };
         });
 
-        // Process monthly trend data - simplified for now
+        // Process monthly trend data with proper date formatting
         const monthlyTrend = processMonthlyData(storeData || [], adExpenseData || []);
+
+        // Fix: Create topPerformingStores separately to avoid circular reference
+        const topPerformingStores = [...storeSummaryProfit]
+          .sort((a, b) => b.net_profit - a.net_profit)
+          .slice(0, 5);
 
         const responseData: ProfitAnalyticsData = {
           storeSummaryProfit: storeSummaryProfit,
           monthlyTrend: monthlyTrend,
           storeProfitAnalysis: [],
-          topPerformingStores: storeSummaryProfit.slice(0, 5),
+          topPerformingStores: topPerformingStores,
           profitGrowthRate: calculateGrowthRate(monthlyTrend)
         };
 
@@ -171,18 +183,23 @@ export const useProfitAnalytics = (filters: FilterState) => {
   return { data, isLoading, error };
 };
 
-// Helper function to process monthly data with ad expenses
+// Helper function to process monthly data with proper date formatting
 function processMonthlyData(transactions: any[], adExpenses: any[]) {
-  // Group transactions by month
+  // Group transactions by month with proper date formatting
   const monthlyGrouped = transactions.reduce((acc: any, transaction: any) => {
     const date = new Date(transaction.order_created_at);
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    
+    // Fix: Proper date formatting to avoid NaN-NaN-01
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1; // getMonth() returns 0-11, so add 1
+    const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+    const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
     
     if (!acc[monthKey]) {
       acc[monthKey] = {
         store_id: transaction.store_id || '',
         store_name: transaction.stores?.store_name || 'Unknown Store',
-        month: `${monthKey}-01`,
+        month: monthStart,
         monthly_revenue: 0,
         monthly_gross_profit: 0,
         monthly_ad_cost: 0,
@@ -191,8 +208,13 @@ function processMonthlyData(transactions: any[], adExpenses: any[]) {
       };
     }
     
-    acc[monthKey].monthly_revenue += Number(transaction.selling_price || 0) * Number(transaction.quantity || 1);
-    acc[monthKey].monthly_gross_profit += Number(transaction.profit || 0);
+    const safeNumber = (value: any, fallback: number = 0): number => {
+      const num = Number(value);
+      return isNaN(num) ? fallback : num;
+    };
+
+    acc[monthKey].monthly_revenue += safeNumber(transaction.selling_price) * safeNumber(transaction.quantity, 1);
+    acc[monthKey].monthly_gross_profit += safeNumber(transaction.profit);
     acc[monthKey].monthly_orders += 1;
     
     return acc;
@@ -201,23 +223,28 @@ function processMonthlyData(transactions: any[], adExpenses: any[]) {
   // Add ad expenses to monthly data
   adExpenses.forEach((expense: any) => {
     const date = new Date(expense.expense_date);
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const monthKey = `${year}-${String(month).padStart(2, '0')}`;
     
     if (monthlyGrouped[monthKey]) {
       monthlyGrouped[monthKey].monthly_ad_cost += Number(expense.amount || 0);
     }
   });
 
-  // Calculate net profit for each month
-  return Object.values(monthlyGrouped).map((item: any) => ({
-    ...item,
-    monthly_net_profit: item.monthly_gross_profit - item.monthly_ad_cost
-  }));
+  // Calculate net profit for each month and return sorted array
+  return Object.values(monthlyGrouped)
+    .map((item: any) => ({
+      ...item,
+      monthly_net_profit: item.monthly_gross_profit - item.monthly_ad_cost
+    }))
+    .sort((a: any, b: any) => new Date(a.month).getTime() - new Date(b.month).getTime());
 }
 
 function calculateGrowthRate(monthlyData: any[]): number {
   if (monthlyData.length < 2) return 0;
   
+  // Sort by date to ensure proper comparison
   const sortedData = monthlyData.sort((a, b) => 
     new Date(b.month).getTime() - new Date(a.month).getTime()
   );
