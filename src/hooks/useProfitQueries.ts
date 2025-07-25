@@ -66,8 +66,7 @@ export const useStoreProfitSummary = (filters: FilterState) => {
         const profit = transaction.profit || 0;
         
         storeGroups[storeId].total_revenue += revenue;
-        storeGroups[storeI
-[storeId].total_cost += cost;
+        storeGroups[storeId].total_cost += cost;
         storeGroups[storeId].gross_profit += profit;
         
         if (transaction.delivery_status === 'Selesai') {
