@@ -1,9 +1,10 @@
+
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { LayoutDashboard, Upload, PlusCircle, BarChart3, Package, Store, Users, Settings, BookOpen, X, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Upload, PlusCircle, BarChart3, Package, Store, Users, Settings, BookOpen, X, DollarSign, FileText } from 'lucide-react';
 import { NavigationItem } from '@/types/auth';
 
 interface SidebarProps {
@@ -25,7 +26,11 @@ const navigationItems: Record<string, NavigationItem[]> = {
     icon: PlusCircle,
     label: 'Input Manual',
     path: '/manual-input'
-  }, { // <-- Item baru ditambahkan di sini
+  }, {
+    icon: FileText,
+    label: 'Transaksi',
+    path: '/transactions'
+  }, {
     icon: DollarSign,
     label: 'Biaya Iklan',
     path: '/ad-expenses'
@@ -66,7 +71,11 @@ const navigationItems: Record<string, NavigationItem[]> = {
     icon: PlusCircle,
     label: 'Input Manual',
     path: '/manual-input'
-  }, { // <-- Item baru ditambahkan di sini
+  }, {
+    icon: FileText,
+    label: 'Transaksi',
+    path: '/transactions'
+  }, {
     icon: DollarSign,
     label: 'Biaya Iklan',
     path: '/ad-expenses'
@@ -92,6 +101,10 @@ const navigationItems: Record<string, NavigationItem[]> = {
     label: 'Dashboard',
     path: '/'
   }, {
+    icon: FileText,
+    label: 'Transaksi',
+    path: '/transactions'
+  }, {
     icon: BarChart3,
     label: 'Analytics',
     path: '/analytics'
@@ -108,6 +121,10 @@ const navigationItems: Record<string, NavigationItem[]> = {
     icon: LayoutDashboard,
     label: 'Dashboard',
     path: '/'
+  }, {
+    icon: FileText,
+    label: 'Transaksi',
+    path: '/transactions'
   }, {
     icon: BookOpen,
     label: 'Panduan',
@@ -128,6 +145,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
     return location.pathname.startsWith(path);
   };
+
   return <>
       {/* Mobile overlay */}
       {isOpen && <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 md:hidden" onClick={onClose} />}
