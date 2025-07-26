@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,7 +19,7 @@ export const TrendAnalysisPanel = ({ timeframe }: TrendAnalysisProps) => {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Activity className="h-5 w-5 mr-2 text-muted-foreground" />
-            Trend Analysis
+            Analisis Tren
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -39,10 +40,10 @@ export const TrendAnalysisPanel = ({ timeframe }: TrendAnalysisProps) => {
       <CardHeader>
         <CardTitle className="flex items-center">
           <Activity className="h-5 w-5 mr-2 text-primary" />
-          Trend Analysis
+          Analisis Tren
         </CardTitle>
         <CardDescription>
-          Pattern recognition and forecasting
+          Pengenalan pola dan peramalan
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -56,7 +57,7 @@ export const TrendAnalysisPanel = ({ timeframe }: TrendAnalysisProps) => {
               onClick={() => setSelectedTrend(trend)}
               className="flex-1"
             >
-              {trend.charAt(0).toUpperCase() + trend.slice(1)}
+              {trend === 'revenue' ? 'Omset' : trend === 'profit' ? 'Profit' : 'Pertumbuhan'}
             </Button>
           ))}
         </div>
@@ -68,17 +69,17 @@ export const TrendAnalysisPanel = ({ timeframe }: TrendAnalysisProps) => {
              currentTrend?.direction === 'down' ? '📉' : '➡️'}
           </div>
           <p className="text-lg font-semibold">
-            {currentTrend?.label || 'No data available'}
+            {currentTrend?.label || 'Tidak ada data tersedia'}
           </p>
           <p className="text-sm text-muted-foreground mt-1">
-            {currentTrend?.description || 'Analyzing trend patterns...'}
+            {currentTrend?.description || 'Menganalisis pola tren...'}
           </p>
         </div>
 
         {/* Trend Metrics */}
         <div className="space-y-4">
           <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-            <span className="text-sm text-muted-foreground">Current Trend:</span>
+            <span className="text-sm text-muted-foreground">Tren Saat Ini:</span>
             <span className={`font-medium flex items-center ${
               (currentTrend?.percentage || 0) > 0 ? 'text-green-600' : 
               (currentTrend?.percentage || 0) < 0 ? 'text-red-600' : 'text-muted-foreground'
@@ -92,14 +93,14 @@ export const TrendAnalysisPanel = ({ timeframe }: TrendAnalysisProps) => {
           </div>
           
           <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-            <span className="text-sm text-muted-foreground">Volatility:</span>
+            <span className="text-sm text-muted-foreground">Volatilitas:</span>
             <span className="font-medium">
-              {currentTrend?.volatility || 'Low'}
+              {currentTrend?.volatility || 'Rendah'}
             </span>
           </div>
           
           <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-            <span className="text-sm text-muted-foreground">Confidence:</span>
+            <span className="text-sm text-muted-foreground">Kepercayaan:</span>
             <div className="flex items-center space-x-2">
               <div className="w-16 bg-muted rounded-full h-2">
                 <div 
@@ -117,12 +118,12 @@ export const TrendAnalysisPanel = ({ timeframe }: TrendAnalysisProps) => {
         {/* Forecast */}
         {trendData?.forecast && (
           <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">30-Day Forecast</h4>
+            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Perkiraan 30 Hari</h4>
             <p className="text-sm text-blue-800 dark:text-blue-200">
               {trendData.forecast.summary}
             </p>
             <div className="mt-3 flex justify-between text-sm">
-              <span className="text-blue-700 dark:text-blue-300">Projected {selectedTrend}:</span>
+              <span className="text-blue-700 dark:text-blue-300">Proyeksi {selectedTrend === 'revenue' ? 'Omset' : selectedTrend === 'profit' ? 'Profit' : 'Pertumbuhan'}:</span>
               <span className="font-medium text-blue-900 dark:text-blue-100">
                 {selectedTrend === 'growth' ? 
                   `${trendData.forecast[selectedTrend]?.toFixed(1)}%` :
@@ -136,7 +137,7 @@ export const TrendAnalysisPanel = ({ timeframe }: TrendAnalysisProps) => {
         {/* Key Patterns */}
         {trendData?.patterns && (
           <div>
-            <h4 className="font-medium mb-3">Key Patterns</h4>
+            <h4 className="font-medium mb-3">Pola Utama</h4>
             <div className="space-y-2">
               {trendData.patterns.map((pattern: any, index: number) => (
                 <div key={index} className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">

@@ -15,16 +15,16 @@ export const AnalyticsKPIGrid = ({ timeframe, platforms }: KPIGridProps) => {
   
   const kpiMetrics = useMemo(() => [
     {
-      title: "Total Revenue",
+      title: "Total Omset",
       value: formatCurrency(kpiData?.totalRevenue || 0),
       change: kpiData?.revenueChange || 0,
       trend: kpiData?.revenueTrend || 'neutral',
       icon: DollarSign,
       color: "green",
-      subtitle: `${kpiData?.totalTransactions || 0} transactions`
+      subtitle: `${kpiData?.totalTransactions || 0} transaksi`
     },
     {
-      title: "Gross Profit", 
+      title: "Profit Kotor", 
       value: formatCurrency(kpiData?.totalProfit || 0),
       change: kpiData?.profitChange || 0,
       trend: kpiData?.profitTrend || 'neutral',
@@ -33,16 +33,16 @@ export const AnalyticsKPIGrid = ({ timeframe, platforms }: KPIGridProps) => {
       subtitle: `${((kpiData?.totalProfit || 0) / (kpiData?.totalRevenue || 1) * 100).toFixed(1)}% margin`
     },
     {
-      title: "Average Order Value",
+      title: "Rata-rata Nilai Order",
       value: formatCurrency(kpiData?.avgOrderValue || 0),
       change: kpiData?.aovChange || 0,
       trend: kpiData?.aovTrend || 'neutral',
       icon: BarChart3,
       color: "purple",
-      subtitle: "Per transaction"
+      subtitle: "Per transaksi"
     },
     {
-      title: "Top Platform",
+      title: "Platform Teratas",
       value: kpiData?.topPlatform || 'N/A',
       change: kpiData?.topPlatformChange || 0,
       trend: kpiData?.topPlatformTrend || 'neutral',
@@ -51,22 +51,22 @@ export const AnalyticsKPIGrid = ({ timeframe, platforms }: KPIGridProps) => {
       subtitle: formatCurrency(kpiData?.topProduct?.revenue || 0)
     },
     {
-      title: "Growth Rate",
+      title: "Tingkat Pertumbuhan",
       value: `${(kpiData?.growthRate || 0).toFixed(1)}%`,
       change: kpiData?.growthRateChange || 0,
       trend: kpiData?.growthRateTrend || 'neutral',
       icon: Activity,
       color: "indigo",
-      subtitle: "Month over month"
+      subtitle: "Bulan ke bulan"
     },
     {
-      title: "Best Product",
+      title: "Produk Terbaik",
       value: kpiData?.topProduct?.name ? (kpiData.topProduct.name.length > 20 ? kpiData.topProduct.name.substring(0, 20) + '...' : kpiData.topProduct.name) : 'N/A',
       change: kpiData?.topProductChange || 0,
       trend: kpiData?.topProductTrend || 'neutral',
       icon: Star,
       color: "yellow",
-      subtitle: `${kpiData?.topProduct?.units || 0} units sold`
+      subtitle: `${kpiData?.topProduct?.units || 0} unit terjual`
     }
   ], [kpiData]);
 
@@ -76,9 +76,9 @@ export const AnalyticsKPIGrid = ({ timeframe, platforms }: KPIGridProps) => {
         <Card className="col-span-full">
           <CardContent className="p-6">
             <div className="text-center text-destructive">
-              <p className="font-medium">Error loading KPI data</p>
+              <p className="font-medium">Kesalahan memuat data KPI</p>
               <p className="text-sm text-muted-foreground mt-1">
-                {error instanceof Error ? error.message : 'Failed to load analytics data'}
+                {error instanceof Error ? error.message : 'Gagal memuat data analisis'}
               </p>
             </div>
           </CardContent>

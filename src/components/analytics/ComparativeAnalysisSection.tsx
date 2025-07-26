@@ -1,3 +1,4 @@
+
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Loader2 } from 'lucide-react';
@@ -158,7 +159,7 @@ export const ComparativeAnalysisSection = ({ timeframe, platforms }: Comparative
 
     return [
       {
-        label: 'Revenue',
+        label: 'Omset',
         current: comparisonData.currentPeriod.revenue,
         previous: comparisonData.previousPeriod.revenue,
         format: formatCurrency
@@ -170,13 +171,13 @@ export const ComparativeAnalysisSection = ({ timeframe, platforms }: Comparative
         format: formatCurrency
       },
       {
-        label: 'Transactions',
+        label: 'Transaksi',
         current: comparisonData.currentPeriod.transactions,
         previous: comparisonData.previousPeriod.transactions,
         format: (val: number) => val.toLocaleString()
       },
       {
-        label: 'Avg Order Value',
+        label: 'Rata-rata Nilai Order',
         current: comparisonData.currentPeriod.avgOrderValue,
         previous: comparisonData.previousPeriod.avgOrderValue,
         format: formatCurrency
@@ -190,14 +191,14 @@ export const ComparativeAnalysisSection = ({ timeframe, platforms }: Comparative
         <CardHeader>
           <CardTitle className="flex items-center">
             <TrendingUp className="h-5 w-5 mr-2 text-primary" />
-            Comparative Analysis - Current vs Previous {timeframe}
+            Analisis Perbandingan - Saat Ini vs Sebelumnya {timeframe}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center text-destructive p-6">
-            <p className="font-medium">Error loading comparison data</p>
+            <p className="font-medium">Kesalahan memuat data perbandingan</p>
             <p className="text-sm text-muted-foreground mt-1">
-              {error instanceof Error ? error.message : 'Failed to load comparative analysis'}
+              {error instanceof Error ? error.message : 'Gagal memuat analisis perbandingan'}
             </p>
           </div>
         </CardContent>
@@ -211,13 +212,13 @@ export const ComparativeAnalysisSection = ({ timeframe, platforms }: Comparative
         <CardHeader>
           <CardTitle className="flex items-center">
             <TrendingUp className="h-5 w-5 mr-2 text-primary" />
-            Comparative Analysis - Current vs Previous {timeframe}
+            Analisis Perbandingan - Saat Ini vs Sebelumnya {timeframe}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin mr-2" />
-            <span className="text-muted-foreground">Loading comparison data...</span>
+            <span className="text-muted-foreground">Memuat data perbandingan...</span>
           </div>
         </CardContent>
       </Card>
@@ -230,13 +231,13 @@ export const ComparativeAnalysisSection = ({ timeframe, platforms }: Comparative
         <CardHeader>
           <CardTitle className="flex items-center">
             <TrendingUp className="h-5 w-5 mr-2 text-primary" />
-            Comparative Analysis - Current vs Previous {timeframe}
+            Analisis Perbandingan - Saat Ini vs Sebelumnya {timeframe}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center text-muted-foreground p-6">
-            <p>No data available for comparison</p>
-            <p className="text-sm mt-1">Try adjusting your filters or date range</p>
+            <p>Tidak ada data untuk perbandingan</p>
+            <p className="text-sm mt-1">Coba sesuaikan filter atau rentang tanggal Anda</p>
           </div>
         </CardContent>
       </Card>
@@ -248,7 +249,7 @@ export const ComparativeAnalysisSection = ({ timeframe, platforms }: Comparative
       <CardHeader>
         <CardTitle className="flex items-center">
           <TrendingUp className="h-5 w-5 mr-2 text-primary" />
-          Comparative Analysis - Current vs Previous {timeframe}
+          Analisis Perbandingan - Saat Ini vs Sebelumnya {timeframe}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -272,19 +273,19 @@ export const ComparativeAnalysisSection = ({ timeframe, platforms }: Comparative
                 
                 <div className="space-y-2">
                   <div>
-                    <p className="text-xs text-muted-foreground">Current</p>
+                    <p className="text-xs text-muted-foreground">Saat Ini</p>
                     <p className="text-lg font-bold">{metric.format(metric.current)}</p>
                   </div>
                   
                   <div>
-                    <p className="text-xs text-muted-foreground">Previous</p>
+                    <p className="text-xs text-muted-foreground">Sebelumnya</p>
                     <p className="text-sm text-muted-foreground">{metric.format(metric.previous)}</p>
                   </div>
                 </div>
                 
                 <div className="mt-3 pt-3 border-t">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Change:</span>
+                    <span className="text-muted-foreground">Perubahan:</span>
                     <span className={`font-medium ${
                       isPositive ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-muted-foreground'
                     }`}>
@@ -299,23 +300,23 @@ export const ComparativeAnalysisSection = ({ timeframe, platforms }: Comparative
         
         {/* Summary Insights - Real Data Based */}
         <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-          <h4 className="font-medium mb-2">Period Comparison Summary</h4>
+          <h4 className="font-medium mb-2">Ringkasan Perbandingan Periode</h4>
           <div className="text-sm text-muted-foreground space-y-1">
-            <p>• Revenue growth of {calculateChange(comparisonData.currentPeriod.revenue, comparisonData.previousPeriod.revenue).toFixed(1)}% indicates {calculateChange(comparisonData.currentPeriod.revenue, comparisonData.previousPeriod.revenue) > 0 ? 'strong business performance' : 'need for improvement'}</p>
-            <p>• Profit margin is {comparisonData.currentPeriod.revenue > 0 ? ((comparisonData.currentPeriod.profit / comparisonData.currentPeriod.revenue) * 100).toFixed(1) : '0'}% in current period</p>
-            <p>• Transaction volume {calculateChange(comparisonData.currentPeriod.transactions, comparisonData.previousPeriod.transactions) > 0 ? 'increased' : calculateChange(comparisonData.currentPeriod.transactions, comparisonData.previousPeriod.transactions) < 0 ? 'decreased' : 'remained stable'} by {Math.abs(calculateChange(comparisonData.currentPeriod.transactions, comparisonData.previousPeriod.transactions)).toFixed(1)}%</p>
-            <p>• Average order value {calculateChange(comparisonData.currentPeriod.avgOrderValue, comparisonData.previousPeriod.avgOrderValue) > 0 ? 'grew' : calculateChange(comparisonData.currentPeriod.avgOrderValue, comparisonData.previousPeriod.avgOrderValue) < 0 ? 'declined' : 'stayed the same'} by {Math.abs(calculateChange(comparisonData.currentPeriod.avgOrderValue, comparisonData.previousPeriod.avgOrderValue)).toFixed(1)}%</p>
+            <p>• Pertumbuhan omset sebesar {calculateChange(comparisonData.currentPeriod.revenue, comparisonData.previousPeriod.revenue).toFixed(1)}% menunjukkan {calculateChange(comparisonData.currentPeriod.revenue, comparisonData.previousPeriod.revenue) > 0 ? 'performa bisnis yang kuat' : 'perlu perbaikan'}</p>
+            <p>• Margin profit adalah {comparisonData.currentPeriod.revenue > 0 ? ((comparisonData.currentPeriod.profit / comparisonData.currentPeriod.revenue) * 100).toFixed(1) : '0'}% pada periode saat ini</p>
+            <p>• Volume transaksi {calculateChange(comparisonData.currentPeriod.transactions, comparisonData.previousPeriod.transactions) > 0 ? 'meningkat' : calculateChange(comparisonData.currentPeriod.transactions, comparisonData.previousPeriod.transactions) < 0 ? 'menurun' : 'tetap stabil'} sebesar {Math.abs(calculateChange(comparisonData.currentPeriod.transactions, comparisonData.previousPeriod.transactions)).toFixed(1)}%</p>
+            <p>• Rata-rata nilai order {calculateChange(comparisonData.currentPeriod.avgOrderValue, comparisonData.previousPeriod.avgOrderValue) > 0 ? 'bertumbuh' : calculateChange(comparisonData.currentPeriod.avgOrderValue, comparisonData.previousPeriod.avgOrderValue) < 0 ? 'menurun' : 'tetap sama'} sebesar {Math.abs(calculateChange(comparisonData.currentPeriod.avgOrderValue, comparisonData.previousPeriod.avgOrderValue)).toFixed(1)}%</p>
           </div>
         </div>
 
         {/* Debug Info - Remove in production */}
         <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-          <h5 className="text-xs font-medium text-blue-900 dark:text-blue-100 mb-1">Data Source Info:</h5>
+          <h5 className="text-xs font-medium text-blue-900 dark:text-blue-100 mb-1">Info Sumber Data:</h5>
           <div className="text-xs text-blue-800 dark:text-blue-200 grid grid-cols-2 gap-2">
-            <div>Current Period: {comparisonData.currentPeriod.transactions} transactions</div>
-            <div>Previous Period: {comparisonData.previousPeriod.transactions} transactions</div>
-            <div>Platform Filter: {platforms.length > 0 ? `${platforms.length} selected` : 'All platforms'}</div>
-            <div>Timeframe: {timeframe}</div>
+            <div>Periode Saat Ini: {comparisonData.currentPeriod.transactions} transaksi</div>
+            <div>Periode Sebelumnya: {comparisonData.previousPeriod.transactions} transaksi</div>
+            <div>Filter Platform: {platforms.length > 0 ? `${platforms.length} dipilih` : 'Semua platform'}</div>
+            <div>Rentang Waktu: {timeframe}</div>
           </div>
         </div>
       </CardContent>

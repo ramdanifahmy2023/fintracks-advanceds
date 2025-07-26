@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -92,7 +93,7 @@ export const PlatformPerformanceChart = ({
           <p className="font-medium mb-2">{label}</p>
           <div className="space-y-2">
             <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Revenue:</span>
+              <span className="text-sm text-muted-foreground">Omset:</span>
               <span className="font-medium text-green-600">{formatCurrency(data.revenue)}</span>
             </div>
             <div className="flex justify-between">
@@ -104,12 +105,12 @@ export const PlatformPerformanceChart = ({
               <span className="font-medium text-purple-600">{(data.margin || 0).toFixed(1)}%</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Transactions:</span>
+              <span className="text-sm text-muted-foreground">Transaksi:</span>
               <span className="font-medium text-orange-600">{data.transactions || 0}</span>
             </div>
             {data.growth_rate !== undefined && (
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Growth:</span>
+                <span className="text-sm text-muted-foreground">Pertumbuhan:</span>
                 <span className={`font-medium ${(data.growth_rate || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {(data.growth_rate || 0) > 0 ? '+' : ''}{(data.growth_rate || 0).toFixed(1)}%
                 </span>
@@ -117,7 +118,7 @@ export const PlatformPerformanceChart = ({
             )}
           </div>
           <div className="mt-2 pt-2 border-t">
-            <p className="text-xs text-muted-foreground">Click for detailed analysis</p>
+            <p className="text-xs text-muted-foreground">Klik untuk analisis detail</p>
           </div>
         </div>
       );
@@ -131,15 +132,15 @@ export const PlatformPerformanceChart = ({
         <CardHeader>
           <CardTitle className="flex items-center">
             <BarChart3 className="h-5 w-5 mr-2 text-primary" />
-            Platform Performance
+            Performa Platform
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[350px] flex items-center justify-center">
             <div className="text-center">
-              <p className="text-destructive font-medium">Error loading platform data</p>
+              <p className="text-destructive font-medium">Kesalahan memuat data platform</p>
               <p className="text-sm text-muted-foreground mt-1">
-                {error instanceof Error ? error.message : 'Failed to load platform performance'}
+                {error instanceof Error ? error.message : 'Gagal memuat performa platform'}
               </p>
             </div>
           </div>
@@ -154,13 +155,13 @@ export const PlatformPerformanceChart = ({
         <CardHeader>
           <CardTitle className="flex items-center">
             <BarChart3 className="h-5 w-5 mr-2 text-primary" />
-            Platform Performance
+            Performa Platform
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[350px] flex items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin mr-2" />
-            <span className="text-muted-foreground">Loading platform data...</span>
+            <span className="text-muted-foreground">Memuat data platform...</span>
           </div>
         </CardContent>
       </Card>
@@ -173,15 +174,15 @@ export const PlatformPerformanceChart = ({
         <CardHeader>
           <CardTitle className="flex items-center">
             <BarChart3 className="h-5 w-5 mr-2 text-primary" />
-            Platform Performance
+            Performa Platform
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[350px] flex items-center justify-center">
             <div className="text-center">
-              <p className="text-muted-foreground">No platform data available</p>
+              <p className="text-muted-foreground">Tidak ada data platform tersedia</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Try adjusting your filters or date range
+                Coba sesuaikan filter atau rentang tanggal Anda
               </p>
             </div>
           </div>
@@ -197,10 +198,10 @@ export const PlatformPerformanceChart = ({
           <div>
             <CardTitle className="flex items-center">
               <BarChart3 className="h-5 w-5 mr-2 text-primary" />
-              Platform Performance
+              Performa Platform
             </CardTitle>
             <CardDescription>
-              Comparative analysis across marketplace platforms - Real Data
+              Analisis perbandingan lintas platform marketplace - Data Real
             </CardDescription>
           </div>
           <div className="flex space-x-2">
@@ -209,10 +210,10 @@ export const PlatformPerformanceChart = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="revenue">Revenue</SelectItem>
+                <SelectItem value="revenue">Omset</SelectItem>
                 <SelectItem value="profit">Profit</SelectItem>
                 <SelectItem value="margin">Margin %</SelectItem>
-                <SelectItem value="transactions">Transactions</SelectItem>
+                <SelectItem value="transactions">Transaksi</SelectItem>
               </SelectContent>
             </Select>
             <Button
@@ -221,7 +222,7 @@ export const PlatformPerformanceChart = ({
               onClick={() => setShowDetails(!showDetails)}
             >
               <Eye className="h-4 w-4 mr-1" />
-              Details
+              Detail
             </Button>
           </div>
         </div>
@@ -255,7 +256,7 @@ export const PlatformPerformanceChart = ({
         
         {showDetails && (
           <div className="mt-4 space-y-3">
-            <h4 className="font-medium">Platform Details (Real Data)</h4>
+            <h4 className="font-medium">Detail Platform (Data Real)</h4>
             {sortedData.map((platform, index) => (
               <div key={platform.platform_name} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <div className="flex items-center space-x-3">
@@ -265,7 +266,7 @@ export const PlatformPerformanceChart = ({
                   <div>
                     <p className="font-medium">{platform.platform_name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {platform.transactions || 0} transactions • {(platform.margin || 0).toFixed(1)}% margin
+                      {platform.transactions || 0} transaksi • {(platform.margin || 0).toFixed(1)}% margin
                     </p>
                   </div>
                 </div>
@@ -284,22 +285,22 @@ export const PlatformPerformanceChart = ({
         
         {/* Performance Summary */}
         <div className="mt-4 p-4 bg-primary/5 rounded-lg">
-          <h4 className="font-medium text-primary mb-2">Performance Summary (Real Data)</h4>
+          <h4 className="font-medium text-primary mb-2">Ringkasan Performa (Data Real)</h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
-              <span className="text-muted-foreground">Top Performer:</span>
+              <span className="text-muted-foreground">Performa Teratas:</span>
               <span className="ml-2 font-medium">{topPerformer}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Best Margin:</span>
+              <span className="text-muted-foreground">Margin Terbaik:</span>
               <span className="ml-2 font-medium">{bestMarginPlatform}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Most Active:</span>
+              <span className="text-muted-foreground">Paling Aktif:</span>
               <span className="ml-2 font-medium">{mostActivePlatform}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Growth Leader:</span>
+              <span className="text-muted-foreground">Pemimpin Pertumbuhan:</span>
               <span className="ml-2 font-medium">{growthLeader}</span>
             </div>
           </div>
@@ -307,21 +308,21 @@ export const PlatformPerformanceChart = ({
           {/* Real Data Summary */}
           <div className="mt-3 pt-3 border-t">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs text-muted-foreground">
-              <div>Total Platforms: {sortedData.length}</div>
-              <div>Total Revenue: {formatCurrency(sortedData.reduce((sum, p) => sum + (p.revenue || 0), 0))}</div>
-              <div>Total Transactions: {sortedData.reduce((sum, p) => sum + (p.transactions || 0), 0).toLocaleString()}</div>
+              <div>Total Platform: {sortedData.length}</div>
+              <div>Total Omset: {formatCurrency(sortedData.reduce((sum, p) => sum + (p.revenue || 0), 0))}</div>
+              <div>Total Transaksi: {sortedData.reduce((sum, p) => sum + (p.transactions || 0), 0).toLocaleString()}</div>
             </div>
           </div>
         </div>
 
         {/* Debug Info - Remove in production */}
         <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-          <h5 className="text-xs font-medium text-blue-900 dark:text-blue-100 mb-1">Data Source Info:</h5>
+          <h5 className="text-xs font-medium text-blue-900 dark:text-blue-100 mb-1">Info Sumber Data:</h5>
           <div className="text-xs text-blue-800 dark:text-blue-200 grid grid-cols-2 gap-2">
-            <div>Platforms Found: {sortedData.length}</div>
-            <div>Platform Filter: {platforms.length > 0 ? `${platforms.length} selected` : 'All platforms'}</div>
-            <div>Timeframe: {timeframe}</div>
-            <div>Sort By: {sortBy}</div>
+            <div>Platform Ditemukan: {sortedData.length}</div>
+            <div>Filter Platform: {platforms.length > 0 ? `${platforms.length} dipilih` : 'Semua platform'}</div>
+            <div>Rentang Waktu: {timeframe}</div>
+            <div>Diurutkan berdasarkan: {sortBy}</div>
           </div>
         </div>
       </CardContent>

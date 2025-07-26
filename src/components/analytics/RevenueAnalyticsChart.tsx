@@ -32,7 +32,7 @@ export const RevenueAnalyticsChart = ({
     try {
       // Create a safe copy of the array before sorting
       const sortedData = [...chartData].sort((a, b) => (b[metric] || 0) - (a[metric] || 0));
-      return sortedData[0] ? format(new Date(sortedData[0].date), 'MMM dd') : 'N/A';
+      return sortedData[0] ? format(new Date(sortedData[0].date), 'dd MMM') : 'N/A';
     } catch (error) {
       console.error('Error calculating peak day:', error);
       return 'N/A';
@@ -59,7 +59,7 @@ export const RevenueAnalyticsChart = ({
       return (
         <div className="bg-background p-4 border rounded-lg shadow-lg">
           <p className="font-medium">
-            {format(new Date(label), 'MMM dd, yyyy')}
+            {format(new Date(label), 'dd MMM yyyy')}
           </p>
           <div className="space-y-2 mt-2">
             {payload.map((entry: any, index: number) => (
@@ -76,7 +76,7 @@ export const RevenueAnalyticsChart = ({
           
           {data.breakdown && (
             <div className="mt-2 pt-2 border-t">
-              <p className="text-xs text-muted-foreground">Click for detailed breakdown</p>
+              <p className="text-xs text-muted-foreground">Klik untuk detail lengkap</p>
             </div>
           )}
         </div>
@@ -91,15 +91,15 @@ export const RevenueAnalyticsChart = ({
         <CardHeader>
           <CardTitle className="flex items-center">
             <TrendingUp className="h-5 w-5 mr-2 text-primary" />
-            Revenue Analytics
+            Analisis Omset
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[400px] flex items-center justify-center">
             <div className="text-center">
-              <p className="text-destructive font-medium">Error loading chart data</p>
+              <p className="text-destructive font-medium">Kesalahan memuat data grafik</p>
               <p className="text-sm text-muted-foreground mt-1">
-                {error instanceof Error ? error.message : 'Failed to load revenue analytics'}
+                {error instanceof Error ? error.message : 'Gagal memuat analisis omset'}
               </p>
             </div>
           </div>
@@ -114,7 +114,7 @@ export const RevenueAnalyticsChart = ({
         <CardHeader>
           <CardTitle className="flex items-center">
             <TrendingUp className="h-5 w-5 mr-2 text-primary" />
-            Revenue Analytics
+            Analisis Omset
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -130,15 +130,15 @@ export const RevenueAnalyticsChart = ({
         <CardHeader>
           <CardTitle className="flex items-center">
             <TrendingUp className="h-5 w-5 mr-2 text-primary" />
-            Revenue Analytics
+            Analisis Omset
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[400px] flex items-center justify-center">
             <div className="text-center">
-              <p className="text-muted-foreground">No data available</p>
+              <p className="text-muted-foreground">Tidak ada data tersedia</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Try adjusting your filters or date range
+                Coba sesuaikan filter atau rentang tanggal Anda
               </p>
             </div>
           </div>
@@ -154,13 +154,13 @@ export const RevenueAnalyticsChart = ({
           <div>
             <CardTitle className="flex items-center">
               <TrendingUp className="h-5 w-5 mr-2 text-primary" />
-              Revenue Analytics
+              Analisis Omset
             </CardTitle>
             <CardDescription>
-              {metric === 'revenue' ? 'Revenue' : 
-               metric === 'profit' ? 'Profit' : 
-               metric === 'transactions' ? 'Transaction Count' : 'Profit Margin'} 
-              trends over {timeframe}
+              Tren {metric === 'revenue' ? 'Omset' : 
+                    metric === 'profit' ? 'Profit' : 
+                    metric === 'transactions' ? 'Jumlah Transaksi' : 'Margin Profit'} 
+              selama {timeframe}
             </CardDescription>
           </div>
           <div className="flex space-x-2">
@@ -169,9 +169,9 @@ export const RevenueAnalyticsChart = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="line">Line Chart</SelectItem>
-                <SelectItem value="bar">Bar Chart</SelectItem>
-                <SelectItem value="area">Area Chart</SelectItem>
+                <SelectItem value="line">Grafik Garis</SelectItem>
+                <SelectItem value="bar">Grafik Batang</SelectItem>
+                <SelectItem value="area">Grafik Area</SelectItem>
               </SelectContent>
             </Select>
             <Button
@@ -180,7 +180,7 @@ export const RevenueAnalyticsChart = ({
               onClick={() => setShowComparison(!showComparison)}
             >
               <BarChart className="h-4 w-4 mr-1" />
-              Compare
+              Bandingkan
             </Button>
           </div>
         </div>
@@ -193,7 +193,7 @@ export const RevenueAnalyticsChart = ({
               <XAxis 
                 dataKey="date" 
                 tick={{ fontSize: 12 }}
-                tickFormatter={(value) => format(new Date(value), 'MMM dd')}
+                tickFormatter={(value) => format(new Date(value), 'dd MMM')}
               />
               <YAxis 
                 tick={{ fontSize: 12 }}
@@ -219,9 +219,9 @@ export const RevenueAnalyticsChart = ({
                   strokeWidth: 2, 
                   fill: 'hsl(var(--background))'
                 }}
-                name={metric === 'revenue' ? 'Revenue' : 
+                name={metric === 'revenue' ? 'Omset' : 
                       metric === 'profit' ? 'Profit' : 
-                      metric === 'transactions' ? 'Transactions' : 'Margin %'}
+                      metric === 'transactions' ? 'Transaksi' : 'Margin %'}
               />
               
               {chartData.some(d => d.trendLine !== undefined) && (
@@ -232,7 +232,7 @@ export const RevenueAnalyticsChart = ({
                   strokeWidth={1}
                   strokeDasharray="3 3"
                   dot={false}
-                  name="Trend"
+                  name="Tren"
                 />
               )}
             </LineChart>
@@ -241,7 +241,7 @@ export const RevenueAnalyticsChart = ({
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 dataKey="date" 
-                tickFormatter={(value) => format(new Date(value), 'MMM dd')}
+                tickFormatter={(value) => format(new Date(value), 'dd MMM')}
               />
               <YAxis tickFormatter={(value) => 
                 metric === 'margin' ? `${value}%` : formatCurrency(value)
@@ -258,7 +258,7 @@ export const RevenueAnalyticsChart = ({
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 dataKey="date"
-                tickFormatter={(value) => format(new Date(value), 'MMM dd')}
+                tickFormatter={(value) => format(new Date(value), 'dd MMM')}
               />
               <YAxis tickFormatter={(value) => 
                 metric === 'margin' ? `${value}%` : formatCurrency(value)
@@ -276,22 +276,22 @@ export const RevenueAnalyticsChart = ({
         
         {/* Chart Insights */}
         <div className="mt-4 p-4 bg-primary/5 rounded-lg">
-          <h4 className="font-medium text-primary mb-2">Key Insights</h4>
+          <h4 className="font-medium text-primary mb-2">Wawasan Utama</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <span className="text-muted-foreground">Peak Day:</span>
+              <span className="text-muted-foreground">Hari Puncak:</span>
               <span className="ml-2 font-medium">{peakDay}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Average Daily:</span>
+              <span className="text-muted-foreground">Rata-rata Harian:</span>
               <span className="ml-2 font-medium">
                 {formatCurrency(averageDaily)}
               </span>
             </div>
             <div>
-              <span className="text-muted-foreground">Trend:</span>
+              <span className="text-muted-foreground">Tren:</span>
               <span className="ml-2 font-medium">
-                📈 Growing
+                📈 Berkembang
               </span>
             </div>
           </div>

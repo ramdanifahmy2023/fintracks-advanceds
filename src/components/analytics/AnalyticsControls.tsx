@@ -59,52 +59,52 @@ export const AnalyticsControls = ({
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       {/* Timeframe Selection */}
       <div className="space-y-2">
-        <Label>Time Period</Label>
+        <Label>Periode Waktu</Label>
         <Select value={timeframe} onValueChange={onTimeframeChange}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="7d">Last 7 Days</SelectItem>
-            <SelectItem value="30d">Last 30 Days</SelectItem>
-            <SelectItem value="90d">Last 90 Days</SelectItem>
-            <SelectItem value="1y">Last 1 Year</SelectItem>
-            <SelectItem value="custom">Custom Range</SelectItem>
+            <SelectItem value="7d">7 Hari Terakhir</SelectItem>
+            <SelectItem value="30d">30 Hari Terakhir</SelectItem>
+            <SelectItem value="90d">90 Hari Terakhir</SelectItem>
+            <SelectItem value="1y">1 Tahun Terakhir</SelectItem>
+            <SelectItem value="custom">Rentang Khusus</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {/* Primary Metric Selection */}
       <div className="space-y-2">
-        <Label>Primary Metric</Label>
+        <Label>Metrik Utama</Label>
         <Select value={metric} onValueChange={onMetricChange}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="revenue">Revenue</SelectItem>
+            <SelectItem value="revenue">Omset</SelectItem>
             <SelectItem value="profit">Profit</SelectItem>
-            <SelectItem value="transactions">Transactions</SelectItem>
-            <SelectItem value="margin">Profit Margin</SelectItem>
+            <SelectItem value="transactions">Transaksi</SelectItem>
+            <SelectItem value="margin">Margin Profit</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {/* Platform Filter */}
       <div className="space-y-2">
-        <Label>Platforms</Label>
+        <Label>Platform</Label>
         <Select 
           value={platforms.length > 0 ? platforms[0] : "all"}
           onValueChange={(value) => onPlatformsChange(value === "all" ? [] : [value])}
         >
           <SelectTrigger>
-            <SelectValue placeholder="All Platforms" />
+            <SelectValue placeholder="Semua Platform" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Platforms</SelectItem>
+            <SelectItem value="all">Semua Platform</SelectItem>
             {platformsError ? (
               <SelectItem value="error" disabled>
-                Error loading platforms
+                Kesalahan memuat platform
               </SelectItem>
             ) : availablePlatforms ? (
               availablePlatforms.map((platform) => (
@@ -114,7 +114,7 @@ export const AnalyticsControls = ({
               ))
             ) : (
               <SelectItem value="loading" disabled>
-                Loading platforms...
+                Memuat platform...
               </SelectItem>
             )}
           </SelectContent>
@@ -123,11 +123,11 @@ export const AnalyticsControls = ({
 
       {/* Quick Actions */}
       <div className="space-y-2">
-        <Label>Quick Actions</Label>
+        <Label>Aksi Cepat</Label>
         <div className="flex space-x-2">
           <Button size="sm" variant="outline" onClick={handleCompareWithPrevious}>
             <TrendingUp className="h-4 w-4 mr-1" />
-            Compare
+            Bandingkan
           </Button>
           <Button size="sm" variant="outline" onClick={handleResetFilters}>
             <RotateCcw className="h-4 w-4 mr-1" />

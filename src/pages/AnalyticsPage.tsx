@@ -1,6 +1,6 @@
 
 // =============================================
-// UPDATED: src/pages/AnalyticsPage.tsx - Now with Real Profit Analytics
+// UPDATED: src/pages/AnalyticsPage.tsx - Now with Indonesian Labels
 // =============================================
 
 import { useState, useMemo } from 'react';
@@ -113,19 +113,19 @@ export const AnalyticsPage = () => {
       {/* Analytics Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Advanced Analytics</h1>
+          <h1 className="text-2xl font-bold">Analisis Lanjutan</h1>
           <p className="text-muted-foreground">
-            Comprehensive analytics with charts, trends, and real-time insights
+            Analisis komprehensif dengan grafik, tren, dan wawasan real-time
           </p>
         </div>
         <div className="flex space-x-2">
           <Button variant="outline" onClick={() => setExportModalOpen(true)}>
             <Download className="h-4 w-4 mr-2" />
-            Export Reports
+            Ekspor Laporan
           </Button>
           <Button variant="outline" onClick={handleRefreshData}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh Data
+            Perbarui Data
           </Button>
         </div>
       </div>
@@ -148,7 +148,7 @@ export const AnalyticsPage = () => {
       {summaryLoading && (
         <Card>
           <CardContent className="p-6 text-center">
-            <p className="text-muted-foreground">Loading analytics data...</p>
+            <p className="text-muted-foreground">Memuat data analisis...</p>
           </CardContent>
         </Card>
       )}
@@ -213,11 +213,11 @@ export const AnalyticsPage = () => {
         <Card className="mt-6">
           <CardContent className="p-4">
             <h3 className="text-sm font-medium text-muted-foreground mb-2">
-              Real-time Data Summary (Last {selectedTimeframe})
+              Ringkasan Data Real-time (Terakhir {selectedTimeframe})
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
               <div>
-                <span className="text-muted-foreground">Revenue:</span>
+                <span className="text-muted-foreground">Omset:</span>
                 <p className="font-medium">
                   {new Intl.NumberFormat('id-ID', { 
                     style: 'currency', 
@@ -241,11 +241,11 @@ export const AnalyticsPage = () => {
                 <p className="font-medium">{analyticsData.profitMargin}%</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Orders:</span>
+                <span className="text-muted-foreground">Order:</span>
                 <p className="font-medium">{analyticsData.totalTransactions}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Completion:</span>
+                <span className="text-muted-foreground">Penyelesaian:</span>
                 <p className="font-medium">{Math.abs(analyticsData.growthRate)}%</p>
               </div>
             </div>
@@ -254,11 +254,11 @@ export const AnalyticsPage = () => {
             {profitData && profitData.storeSummaryProfit.length > 0 && (
               <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
                 <h4 className="text-sm font-medium text-green-800 mb-2">
-                  ✅ Real Profit Analytics Active
+                  ✅ Analisis Profit Real Aktif
                 </h4>
                 <p className="text-sm text-green-700">
-                  Showing {profitData.storeSummaryProfit.length} stores with real-time profit calculations: 
-                  Net Profit = (Selling Price - Cost Price - Ad Cost) for completed orders only
+                  Menampilkan {profitData.storeSummaryProfit.length} toko dengan perhitungan profit real-time: 
+                  Profit Bersih = (Harga Jual - Harga Beli - Biaya Iklan) untuk order selesai saja
                 </p>
               </div>
             )}
