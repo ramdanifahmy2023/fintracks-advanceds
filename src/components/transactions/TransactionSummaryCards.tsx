@@ -3,56 +3,56 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, XCircle, RotateCcw, Truck, Clock } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
-import { TransactionSummary } from '@/hooks/useTransactions';
+import { TransactionFilters, useTransactionSummary } from '@/hooks/useTransactions';
 
 interface TransactionSummaryCardsProps {
-  summary: TransactionSummary;
-  isLoading: boolean;
+  filters: TransactionFilters;
 }
 
 export const TransactionSummaryCards: React.FC<TransactionSummaryCardsProps> = ({
-  summary,
-  isLoading
+  filters
 }) => {
+  const { data: summary, isLoading } = useTransactionSummary(filters);
+
   const cards = [
     {
       title: 'Total Transaksi',
-      value: summary.total_transactions,
+      value: summary?.total_transactions || 0,
       icon: CheckCircle,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50'
     },
     {
       title: 'Pesanan Selesai',
-      value: summary.completed_orders,
+      value: summary?.completed_orders || 0,
       icon: CheckCircle,
       color: 'text-green-600',
       bgColor: 'bg-green-50'
     },
     {
       title: 'Sedang Dikirim',
-      value: summary.shipping_orders,
+      value: summary?.shipping_orders || 0,
       icon: Truck,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50'
     },
     {
       title: 'Pesanan Batal',
-      value: summary.cancelled_orders,
+      value: summary?.cancelled_orders || 0,
       icon: XCircle,
       color: 'text-red-600',
       bgColor: 'bg-red-50'
     },
     {
       title: 'Return/Refund',
-      value: summary.returned_orders,
+      value: summary?.returned_orders || 0,
       icon: RotateCcw,
       color: 'text-orange-600',
       bgColor: 'bg-orange-50'
     },
     {
       title: 'Menunggu Konfirmasi',
-      value: summary.pending_orders,
+      value: summary?.pending_orders || 0,
       icon: Clock,
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-50'
@@ -81,7 +81,7 @@ export const TransactionSummaryCards: React.FC<TransactionSummaryCardsProps> = (
                   {isLoading ? '-' : formatNumber(card.value)}
                 </span>
                 <Badge variant="secondary" className="ml-2">
-                  {isLoading ? '-%' : ((card.value / summary.total_transactions) * 100).toFixed(1)}%
+                  {isLoading ? '-%' : summary?.total_transactions ? ((card.value / summary.total_transactions) * 100).toFixed(1) : '0'}%
                 </Badge>
               </div>
             </CardContent>
