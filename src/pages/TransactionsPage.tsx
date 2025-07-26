@@ -1,81 +1,63 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
-import { TransactionFilters, useTransactions, useTransactionSummary } from '@/hooks/useTransactions';
+import { Input } from '@/components/ui/input';
+import { Plus, Search, Download } from 'lucide-react';
 import { TransactionSummaryCards } from '@/components/transactions/TransactionSummaryCards';
-import { TransactionFilters as TransactionFiltersComponent } from '@/components/transactions/TransactionFilters';
+import { TransactionFiltersComponent } from '@/components/transactions/TransactionFilters';
 import { TransactionTable } from '@/components/transactions/TransactionTable';
-import { 
-  Pagination, 
-  PaginationContent, 
-  PaginationItem, 
-  PaginationLink, 
-  PaginationNext, 
-  PaginationPrevious 
-} from '@/components/ui/pagination';
-import { useAuth } from '@/contexts/AuthContext';
+import { useTransactions, type TransactionFilters } from '@/hooks/useTransactions';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { TransactionEditForm } from '@/components/transactions/TransactionEditForm';
 
-const TransactionsPage = () => {
-  const { userRole } = useAuth();
+const TransactionsPage: React.FC = () => {
   const [filters, setFilters] = useState<TransactionFilters>({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 50;
+  const [page, setPage] = useState(1);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
 
-  const { data: transactionData, isLoading: isTransactionsLoading } = useTransactions(
-    filters,
-    currentPage,
-    pageSize
-  );
-
-  const { data: summary, isLoading: isSummaryLoading } = useTransactionSummary(filters);
-
-  const transactions = transactionData?.transactions || [];
-  const totalCount = transactionData?.totalCount || 0;
-  const totalPages = Math.ceil(totalCount / pageSize);
+  const { data, isLoading, error } = useTransactions(filters, page, 50);
+  const transactions = data?.transactions || [];
+  const totalCount = data?.totalCount || 0;
 
   const handleFiltersChange = (newFilters: TransactionFilters) => {
     setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
+    setPage(1); // Reset to first page when filters change
   };
 
   const handleEdit = (transaction: any) => {
-    // This will be handled by the TransactionTable component
+    setSelectedTransaction(transaction);
   };
 
-  const canCreateTransaction = userRole === 'super_admin' || userRole === 'admin';
-  const canEditTransaction = userRole === 'super_admin' || userRole === 'admin';
+  const handleExport = () => {
+    console.log('Export functionality coming soon');
+  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Page Header */}
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Manajemen Transaksi</h1>
-          <p className="text-muted-foreground">
-            Kelola dan pantau semua transaksi dari upload CSV dan input manual
+          <h1 className="text-3xl font-bold">Rincian Transaksi</h1>
+          <p className="text-muted-foreground mt-2">
+            Kelola semua transaksi penjualan dari berbagai platform
           </p>
         </div>
-        {canCreateTransaction && (
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
+        <div className="flex items-center space-x-3">
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </Button>
+          <Button onClick={() => setShowAddModal(true)}>
+            <Plus className="mr-2 h-4 w-4" />
             Tambah Transaksi
           </Button>
-        )}
+        </div>
       </div>
 
       {/* Summary Cards */}
-      <TransactionSummaryCards
-        summary={summary || {
-          total_transactions: 0,
-          completed_orders: 0,
-          cancelled_orders: 0,
-          returned_orders: 0,
-          shipping_orders: 0,
-          pending_orders: 0
-        }}
-        isLoading={isSummaryLoading}
-      />
+      <TransactionSummaryCards filters={filters} />
 
       {/* Filters */}
       <TransactionFiltersComponent
@@ -83,55 +65,57 @@ const TransactionsPage = () => {
         onFiltersChange={handleFiltersChange}
       />
 
-      {/* Transaction Table */}
+      {/* Transactions Table */}
       <TransactionTable
         transactions={transactions}
-        isLoading={isTransactionsLoading}
+        isLoading={isLoading}
         onEdit={handleEdit}
       />
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                />
-              </PaginationItem>
-              
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const pageNumber = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
-                return (
-                  <PaginationItem key={pageNumber}>
-                    <PaginationLink
-                      onClick={() => setCurrentPage(pageNumber)}
-                      isActive={currentPage === pageNumber}
-                      className="cursor-pointer"
-                    >
-                      {pageNumber}
-                    </PaginationLink>
-                  </PaginationItem>
-                );
-              })}
-              
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+      {totalCount > 50 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Menampilkan {((page - 1) * 50) + 1} - {Math.min(page * 50, totalCount)} dari {totalCount} transaksi
+          </p>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page - 1)}
+              disabled={page === 1}
+            >
+              Sebelumnya
+            </Button>
+            <span className="text-sm">
+              Halaman {page} dari {Math.ceil(totalCount / 50)}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page + 1)}
+              disabled={page >= Math.ceil(totalCount / 50)}
+            >
+              Selanjutnya
+            </Button>
+          </div>
         </div>
       )}
 
-      {/* Page Info */}
-      <div className="text-center text-sm text-muted-foreground">
-        Menampilkan {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalCount)} dari {totalCount} transaksi
-      </div>
+      {/* Add Transaction Modal */}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Tambah Transaksi Baru</DialogTitle>
+          </DialogHeader>
+          <TransactionEditForm
+            transaction={null}
+            onSuccess={() => {
+              setShowAddModal(false);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

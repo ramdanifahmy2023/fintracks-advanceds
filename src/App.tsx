@@ -1,22 +1,22 @@
+
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth, AuthProvider } from './contexts/AuthContext';
-import LoginPage from './pages/LoginPage';
+import { LoginPage } from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import UploadPage from './pages/UploadPage';
 import ManualInputPage from './pages/ManualInputPage';
 import AdExpensePage from './pages/AdExpensePage';
-import AnalyticsPage from './pages/AnalyticsPage';
-import ProductsPage from './pages/ProductsPage';
-import StoresPage from './pages/StoresPage';
-import UsersPage from './pages/UsersPage';
-import SettingsPage from './pages/SettingsPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
+import { ProductsPage } from './pages/ProductsPage';
+import { StoresPage } from './pages/StoresPage';
+import { UsersPage } from './pages/UsersPage';
+import { SettingsPage } from './pages/SettingsPage';
 import UserGuidePage from './pages/UserGuidePage';
 import NotFound from './pages/NotFound';
 import { Sidebar } from './components/layout/Sidebar';
 import { cn } from '@/lib/utils';
-import { MobileNav } from './components/layout/MobileNav';
 import TransactionsPage from './pages/TransactionsPage';
 
 interface AppLayoutProps {
@@ -58,7 +58,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               </svg>
             </button>
           </div>
-          <MobileNav user={user} logout={logout} />
+          <div className="flex items-center space-x-4">
+            <span className="text-sm font-medium">
+              {user?.full_name || user?.email}
+            </span>
+            <button
+              onClick={logout}
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Logout
+            </button>
+          </div>
         </header>
         <main className="flex-1">{children}</main>
       </div>

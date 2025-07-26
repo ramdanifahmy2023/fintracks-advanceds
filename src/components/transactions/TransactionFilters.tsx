@@ -6,11 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Search, Filter, X } from 'lucide-react';
-import { TransactionFilters } from '@/hooks/useTransactions';
+import { type TransactionFilters } from '@/hooks/useTransactions';
 import { usePlatforms } from '@/hooks/usePlatforms';
 import { useStores } from '@/hooks/useStores';
 
-interface TransactionFiltersProps {
+interface TransactionFiltersComponentProps {
   filters: TransactionFilters;
   onFiltersChange: (filters: TransactionFilters) => void;
 }
@@ -23,7 +23,7 @@ const DELIVERY_STATUSES = [
   { value: 'Menunggu Konfirmasi', label: 'Menunggu Konfirmasi' }
 ];
 
-export const TransactionFilters: React.FC<TransactionFiltersProps> = ({
+export const TransactionFiltersComponent: React.FC<TransactionFiltersComponentProps> = ({
   filters,
   onFiltersChange
 }) => {
