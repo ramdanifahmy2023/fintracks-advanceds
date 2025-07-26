@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, Package, TrendingUp, BarChart3, Star } from 'lucide-react';
-import { useProductAnalytics } from '@/hooks/useAnalytics';
+import { useProductAnalytics } from '@/hooks/useProductAnalytics';
 import { formatCurrency } from '@/lib/formatters';
 
 interface ProductAnalyticsProps {
@@ -15,10 +15,16 @@ interface ProductAnalyticsProps {
 }
 
 export const ProductPerformanceAnalytics = ({ timeframe }: ProductAnalyticsProps) => {
-  const { data: productData, isLoading, error } = useProductAnalytics(timeframe);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'revenue' | 'profit' | 'units' | 'margin'>('revenue');
+  const [sortBy, setSortBy] = useState<'revenue' | 'profit' | 'units' | 'margin' | 'transactions'>('revenue');
   const [showTopOnly, setShowTopOnly] = useState<'25' | '50' | '100' | 'all'>('25');
+
+  const { data, isLoading, error } = useProductAnalytics({
+    timeframe: timeframe as '7d' | '30d' | '90d' | '1y',
+    sortBy,
+    searchTerm,
+    limit: showTopOnly === 'all' ? 1000 : parseInt(showTopOnly)
+  });
 
   if (isLoading) {
     return (
@@ -62,34 +68,8 @@ export const ProductPerformanceAnalytics = ({ timeframe }: ProductAnalyticsProps
     );
   }
 
-  const filteredData = productData?.filter(product => 
-    product.product_name.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
-
-  const sortedData = [...filteredData].sort((a, b) => {
-    switch (sortBy) {
-      case 'revenue':
-        return (b.revenue || 0) - (a.revenue || 0);
-      case 'profit':
-        return (b.profit || 0) - (a.profit || 0);
-      case 'units':
-        return (b.units_sold || 0) - (a.units_sold || 0);
-      case 'margin':
-        return (b.margin || 0) - (a.margin || 0);
-      default:
-        return 0;
-    }
-  });
-
-  const displayData = showTopOnly === 'all' 
-    ? sortedData 
-    : sortedData.slice(0, parseInt(showTopOnly));
-
-  const totalRevenue = filteredData.reduce((sum, p) => sum + (p.revenue || 0), 0);
-  const totalUnits = filteredData.reduce((sum, p) => sum + (p.units_sold || 0), 0);
-  const avgMargin = filteredData.length > 0 
-    ? filteredData.reduce((sum, p) => sum + (p.margin || 0), 0) / filteredData.length 
-    : 0;
+  const products = data?.products || [];
+  const summary = data?.summary || { total_products: 0, total_revenue: 0, total_units: 0, average_margin: 0 };
 
   return (
     <Card>
@@ -122,6 +102,7 @@ export const ProductPerformanceAnalytics = ({ timeframe }: ProductAnalyticsProps
               <SelectItem value="profit">Profit</SelectItem>
               <SelectItem value="units">Unit Terjual</SelectItem>
               <SelectItem value="margin">Margin %</SelectItem>
+              <SelectItem value="transactions">Transaksi</SelectItem>
             </SelectContent>
           </Select>
           <Select value={showTopOnly} onValueChange={(value) => setShowTopOnly(value as any)}>
@@ -145,7 +126,7 @@ export const ProductPerformanceAnalytics = ({ timeframe }: ProductAnalyticsProps
                 <Package className="h-5 w-5 text-blue-600" />
                 <div>
                   <p className="text-sm text-muted-foreground">Total Produk</p>
-                  <p className="text-xl font-bold">{filteredData.length}</p>
+                  <p className="text-xl font-bold">{summary.total_products}</p>
                 </div>
               </div>
             </CardContent>
@@ -156,7 +137,7 @@ export const ProductPerformanceAnalytics = ({ timeframe }: ProductAnalyticsProps
                 <TrendingUp className="h-5 w-5 text-green-600" />
                 <div>
                   <p className="text-sm text-muted-foreground">Total Omset</p>
-                  <p className="text-xl font-bold">{formatCurrency(totalRevenue)}</p>
+                  <p className="text-xl font-bold">{formatCurrency(summary.total_revenue)}</p>
                 </div>
               </div>
             </CardContent>
@@ -167,7 +148,7 @@ export const ProductPerformanceAnalytics = ({ timeframe }: ProductAnalyticsProps
                 <BarChart3 className="h-5 w-5 text-purple-600" />
                 <div>
                   <p className="text-sm text-muted-foreground">Unit Terjual</p>
-                  <p className="text-xl font-bold">{totalUnits.toLocaleString()}</p>
+                  <p className="text-xl font-bold">{summary.total_units.toLocaleString()}</p>
                 </div>
               </div>
             </CardContent>
@@ -178,7 +159,7 @@ export const ProductPerformanceAnalytics = ({ timeframe }: ProductAnalyticsProps
                 <Star className="h-5 w-5 text-yellow-600" />
                 <div>
                   <p className="text-sm text-muted-foreground">Rata-rata Margin</p>
-                  <p className="text-xl font-bold">{avgMargin.toFixed(1)}%</p>
+                  <p className="text-xl font-bold">{summary.average_margin.toFixed(1)}%</p>
                 </div>
               </div>
             </CardContent>
@@ -200,8 +181,8 @@ export const ProductPerformanceAnalytics = ({ timeframe }: ProductAnalyticsProps
               </TableRow>
             </TableHeader>
             <TableBody>
-              {displayData.map((product, index) => (
-                <TableRow key={product.product_name}>
+              {products.map((product, index) => (
+                <TableRow key={`${product.sku_reference}_${product.product_name}`}>
                   <TableCell>
                     <div className="flex items-center space-x-2">
                       <Badge variant="outline" className="text-xs">
@@ -215,28 +196,28 @@ export const ProductPerformanceAnalytics = ({ timeframe }: ProductAnalyticsProps
                     </div>
                   </TableCell>
                   <TableCell className="font-medium text-green-600">
-                    {formatCurrency(product.revenue || 0)}
+                    {formatCurrency(product.total_revenue)}
                   </TableCell>
                   <TableCell className="font-medium text-blue-600">
-                    {formatCurrency(product.profit || 0)}
+                    {formatCurrency(product.total_profit)}
                   </TableCell>
                   <TableCell>
-                    <span className="font-medium">{product.units_sold || 0}</span>
+                    <span className="font-medium">{product.total_units}</span>
                   </TableCell>
                   <TableCell>
                     <Badge 
-                      variant={(product.margin || 0) > 20 ? 'default' : 'secondary'}
-                      className={(product.margin || 0) > 20 ? 'bg-green-100 text-green-800' : ''}
+                      variant={product.margin_percentage > 20 ? 'default' : 'secondary'}
+                      className={product.margin_percentage > 20 ? 'bg-green-100 text-green-800' : ''}
                     >
-                      {(product.margin || 0).toFixed(1)}%
+                      {product.margin_percentage.toFixed(1)}%
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {formatCurrency(product.avg_price || 0)}
+                    {formatCurrency(product.avg_selling_price)}
                   </TableCell>
                   <TableCell>
                     <span className="text-sm text-muted-foreground">
-                      {product.transactions || 0}
+                      {product.total_transactions}
                     </span>
                   </TableCell>
                 </TableRow>
@@ -246,13 +227,13 @@ export const ProductPerformanceAnalytics = ({ timeframe }: ProductAnalyticsProps
         </div>
 
         {/* Show more button */}
-        {showTopOnly !== 'all' && sortedData.length > parseInt(showTopOnly) && (
+        {showTopOnly !== 'all' && products.length === parseInt(showTopOnly) && (
           <div className="text-center">
             <Button 
               variant="outline" 
               onClick={() => setShowTopOnly('all')}
             >
-              Tampilkan Semua {sortedData.length} Produk
+              Tampilkan Semua Produk
             </Button>
           </div>
         )}
@@ -263,17 +244,17 @@ export const ProductPerformanceAnalytics = ({ timeframe }: ProductAnalyticsProps
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Produk Teratas:</span>
-              <p className="font-medium">{displayData[0]?.product_name || 'N/A'}</p>
+              <p className="font-medium">{products[0]?.product_name || 'N/A'}</p>
             </div>
             <div>
               <span className="text-muted-foreground">Margin Terbaik:</span>
               <p className="font-medium">
-                {Math.max(...displayData.map(p => p.margin || 0)).toFixed(1)}%
+                {Math.max(...products.map(p => p.margin_percentage)).toFixed(1)}%
               </p>
             </div>
             <div>
               <span className="text-muted-foreground">Total Kategori:</span>
-              <p className="font-medium">{filteredData.length} produk</p>
+              <p className="font-medium">{products.length} produk</p>
             </div>
             <div>
               <span className="text-muted-foreground">Filter:</span>
