@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, Filter, X } from 'lucide-react';
+import { Search, Filter, X, AlertCircle } from 'lucide-react';
 import { type TransactionFilters } from '@/hooks/useTransactions';
 import { usePlatforms } from '@/hooks/usePlatforms';
 import { useStores } from '@/hooks/useStores';
@@ -28,11 +28,21 @@ export const TransactionFiltersComponent: React.FC<TransactionFiltersComponentPr
   onFiltersChange
 }) => {
   const [localFilters, setLocalFilters] = useState<TransactionFilters>(filters);
-  const { data: platforms } = usePlatforms();
-  const { data: stores } = useStores();
+  
+  // Fetch platforms and stores with error handling
+  const { data: platforms, isLoading: platformsLoading, error: platformsError } = usePlatforms();
+  const { data: stores, isLoading: storesLoading, error: storesError } = useStores();
+
+  // Debug logs
+  console.log('Platforms data:', platforms);
+  console.log('Stores data:', stores);
+  console.log('Platforms loading:', platformsLoading);
+  console.log('Stores loading:', storesLoading);
 
   const handleFilterChange = (key: keyof TransactionFilters, value: string) => {
-    const newFilters = { ...localFilters, [key]: value || undefined };
+    // Handle "all" values as undefined
+    const processedValue = value === 'all' ? undefined : value;
+    const newFilters = { ...localFilters, [key]: processedValue };
     setLocalFilters(newFilters);
     onFiltersChange(newFilters);
   };
@@ -44,6 +54,14 @@ export const TransactionFiltersComponent: React.FC<TransactionFiltersComponentPr
   };
 
   const activeFiltersCount = Object.values(localFilters).filter(Boolean).length;
+
+  // Error fallback component
+  const ErrorFallback = ({ error, type }: { error: any, type: string }) => (
+    <div className="flex items-center text-sm text-red-600 bg-red-50 p-2 rounded">
+      <AlertCircle className="h-4 w-4 mr-2" />
+      Error loading {type}: {error?.message || 'Unknown error'}
+    </div>
+  );
 
   return (
     <Card>
@@ -99,14 +117,14 @@ export const TransactionFiltersComponent: React.FC<TransactionFiltersComponentPr
           <div className="space-y-2">
             <label className="text-sm font-medium">Status Pengiriman</label>
             <Select
-              value={localFilters.delivery_status || ''}
+              value={localFilters.delivery_status || 'all'}
               onValueChange={(value) => handleFilterChange('delivery_status', value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Pilih status..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Semua Status</SelectItem>
+                <SelectItem value="all">Semua Status</SelectItem>
                 {DELIVERY_STATUSES.map((status) => (
                   <SelectItem key={status.value} value={status.value}>
                     {status.label}
@@ -119,43 +137,51 @@ export const TransactionFiltersComponent: React.FC<TransactionFiltersComponentPr
           {/* Platform */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Platform</label>
-            <Select
-              value={localFilters.platform_id || ''}
-              onValueChange={(value) => handleFilterChange('platform_id', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih platform..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Semua Platform</SelectItem>
-                {platforms?.map((platform) => (
-                  <SelectItem key={platform.id} value={platform.id}>
-                    {platform.platform_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {platformsError ? (
+              <ErrorFallback error={platformsError} type="platforms" />
+            ) : (
+              <Select
+                value={localFilters.platform_id || 'all'}
+                onValueChange={(value) => handleFilterChange('platform_id', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={platformsLoading ? "Loading..." : "Pilih platform..."} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Platform</SelectItem>
+                  {platforms?.map((platform) => (
+                    <SelectItem key={platform.id} value={platform.id}>
+                      {platform.platform_name}
+                    </SelectItem>
+                  )) || []}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* Store */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Toko</label>
-            <Select
-              value={localFilters.store_id || ''}
-              onValueChange={(value) => handleFilterChange('store_id', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih toko..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Semua Toko</SelectItem>
-                {stores?.map((store) => (
-                  <SelectItem key={store.id} value={store.id}>
-                    {store.store_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {storesError ? (
+              <ErrorFallback error={storesError} type="stores" />
+            ) : (
+              <Select
+                value={localFilters.store_id || 'all'}
+                onValueChange={(value) => handleFilterChange('store_id', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={storesLoading ? "Loading..." : "Pilih toko..."} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Toko</SelectItem>
+                  {stores?.map((store) => (
+                    <SelectItem key={store.id} value={store.id}>
+                      {store.store_name}
+                    </SelectItem>
+                  )) || []}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* Date Range */}

@@ -33,6 +33,6 @@ export const useStores = (platformId?: string) => {
 
       return data as Store[];
     },
-    enabled: !!platformId,
+    // Remove enabled condition so it always fetches
   });
 };
