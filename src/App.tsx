@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -16,6 +15,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import UserGuidePage from './pages/UserGuidePage';
 import NotFound from './pages/NotFound';
 import { Sidebar } from './components/layout/Sidebar';
+import { Header } from './components/layout/Header';
 import { cn } from '@/lib/utils';
 import TransactionsPage from './pages/TransactionsPage';
 
@@ -50,26 +50,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     <div className="flex h-screen bg-background font-sans antialiased">
       <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} userRole={userRole || 'viewer'} />
       <div className="flex flex-col flex-1 overflow-x-hidden">
-        <header className="h-16 border-b bg-card flex items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="md:hidden">
-            <button onClick={toggleSidebar} className="text-gray-500 hover:text-gray-700 focus:outline-none">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-sm font-medium">
-              {user?.full_name || user?.email}
-            </span>
-            <button
-              onClick={logout}
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              Logout
-            </button>
-          </div>
-        </header>
+        <Header onToggleSidebar={toggleSidebar} />
         <main className="flex-1">{children}</main>
       </div>
     </div>
