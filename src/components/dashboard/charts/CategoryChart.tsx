@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { formatCurrency } from '@/lib/formatters';
@@ -46,15 +47,34 @@ export const CategoryChart = ({ data, loading }: CategoryChartProps) => {
     );
   }
 
-  // Process data for pie chart
-  const chartData = data
-    .filter(item => item.category && item.completed_profit > 0)
-    .map(item => ({
-      name: item.category || 'Tidak Dikategorikan',
-      value: item.completed_profit || 0,
-      revenue: item.completed_revenue || 0,
-      quantity: item.total_quantity_sold || 0
-    }))
+  // Process data for pie chart - group by category and aggregate
+  const categoryMap = new Map<string, {
+    name: string;
+    value: number;
+    revenue: number;
+    quantity: number;
+  }>();
+
+  data.forEach((item, index) => {
+    const categoryName = item.category || 'Tidak Dikategorikan';
+    
+    if (categoryMap.has(categoryName)) {
+      const existing = categoryMap.get(categoryName)!;
+      existing.value += item.completed_profit || 0;
+      existing.revenue += item.completed_revenue || 0;
+      existing.quantity += item.total_quantity_sold || 0;
+    } else {
+      categoryMap.set(categoryName, {
+        name: categoryName,
+        value: item.completed_profit || 0,
+        revenue: item.completed_revenue || 0,
+        quantity: item.total_quantity_sold || 0
+      });
+    }
+  });
+
+  const chartData = Array.from(categoryMap.values())
+    .filter(item => item.value > 0)
     .sort((a, b) => b.value - a.value)
     .slice(0, 8); // Top 8 categories
 
@@ -98,7 +118,7 @@ export const CategoryChart = ({ data, loading }: CategoryChartProps) => {
               labelLine={false}
             >
               {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                <Cell key={`category-${entry.name}-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
             <Tooltip 
@@ -161,7 +181,7 @@ export const CategoryChart = ({ data, loading }: CategoryChartProps) => {
         {/* Legend with detailed info */}
         <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
           {chartData.slice(0, 6).map((item, index) => (
-            <div key={item.name} className="flex items-center gap-2">
+            <div key={`legend-${item.name}-${index}`} className="flex items-center gap-2">
               <div 
                 className="w-3 h-3 rounded-full" 
                 style={{ backgroundColor: COLORS[index % COLORS.length] }}

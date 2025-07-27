@@ -7,7 +7,7 @@ import { TransactionSummaryCards } from '@/components/transactions/TransactionSu
 import { TransactionFiltersComponent } from '@/components/transactions/TransactionFilters';
 import { TransactionTable } from '@/components/transactions/TransactionTable';
 import { TransactionErrorBoundary } from '@/components/transactions/TransactionErrorBoundary';
-import { useTransactions, type TransactionFilters } from '@/hooks/useTransactions';
+import { useTransactions, type TransactionFilters, type Transaction } from '@/hooks/useTransactions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TransactionEditForm } from '@/components/transactions/TransactionEditForm';
 
@@ -15,7 +15,8 @@ const TransactionsPage: React.FC = () => {
   const [filters, setFilters] = useState<TransactionFilters>({});
   const [page, setPage] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   const { data, isLoading, error } = useTransactions(filters, page, 50);
   const transactions = data?.transactions || [];
@@ -29,8 +30,18 @@ const TransactionsPage: React.FC = () => {
     setPage(1); // Reset to first page when filters change
   };
 
-  const handleEdit = (transaction: any) => {
+  const handleEdit = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setSelectedTransaction(null);
+  };
+
+  const handleCloseAddModal = () => {
+    setShowAddModal(false);
   };
 
   const handleExport = () => {
@@ -136,15 +147,26 @@ const TransactionsPage: React.FC = () => {
 
         {/* Add Transaction Modal */}
         <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Tambah Transaksi Baru</DialogTitle>
             </DialogHeader>
             <TransactionEditForm
               transaction={null}
-              onSuccess={() => {
-                setShowAddModal(false);
-              }}
+              onSuccess={handleCloseAddModal}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Transaction Modal */}
+        <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Transaksi</DialogTitle>
+            </DialogHeader>
+            <TransactionEditForm
+              transaction={selectedTransaction}
+              onSuccess={handleCloseEditModal}
             />
           </DialogContent>
         </Dialog>

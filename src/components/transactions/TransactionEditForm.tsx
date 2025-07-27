@@ -5,12 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Transaction, useUpdateTransaction } from '@/hooks/useTransactions';
+import { Transaction, useUpdateTransaction, useCreateTransaction } from '@/hooks/useTransactions';
 import { usePlatforms } from '@/hooks/usePlatforms';
 import { useStores } from '@/hooks/useStores';
 
 interface TransactionEditFormProps {
-  transaction: Transaction;
+  transaction: Transaction | null;
   onSuccess: () => void;
 }
 
@@ -30,22 +30,28 @@ export const TransactionEditForm: React.FC<TransactionEditFormProps> = ({
   const { data: platforms } = usePlatforms();
   const { data: stores } = useStores();
   const updateTransaction = useUpdateTransaction();
+  const createTransaction = useCreateTransaction();
+
+  const isEditMode = !!transaction;
 
   const form = useForm({
     defaultValues: {
-      order_number: transaction.order_number,
-      manual_order_number: transaction.manual_order_number || '',
-      product_name: transaction.product_name,
-      sku_reference: transaction.sku_reference || '',
-      platform_id: transaction.platform_id,
-      store_id: transaction.store_id,
-      quantity: transaction.quantity,
-      cost_price: transaction.cost_price,
-      selling_price: transaction.selling_price,
-      delivery_status: transaction.delivery_status,
-      expedition: transaction.expedition || '',
-      tracking_number: transaction.tracking_number || '',
-      pic_name: transaction.pic_name
+      order_number: transaction?.order_number || '',
+      manual_order_number: transaction?.manual_order_number || '',
+      product_name: transaction?.product_name || '',
+      sku_reference: transaction?.sku_reference || '',
+      platform_id: transaction?.platform_id || '',
+      store_id: transaction?.store_id || '',
+      quantity: transaction?.quantity || 1,
+      cost_price: transaction?.cost_price || 0,
+      selling_price: transaction?.selling_price || 0,
+      delivery_status: transaction?.delivery_status || 'Menunggu Konfirmasi',
+      expedition: transaction?.expedition || '',
+      tracking_number: transaction?.tracking_number || '',
+      pic_name: transaction?.pic_name || '',
+      order_created_at: transaction?.order_created_at 
+        ? new Date(transaction.order_created_at).toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0]
     }
   });
 
@@ -55,17 +61,24 @@ export const TransactionEditForm: React.FC<TransactionEditFormProps> = ({
       // Calculate profit
       const profit = data.selling_price - data.cost_price;
       
-      await updateTransaction.mutateAsync({
-        id: transaction.id,
-        updates: {
-          ...data,
-          profit
-        }
-      });
+      const transactionData = {
+        ...data,
+        profit,
+        order_created_at: new Date(data.order_created_at).toISOString()
+      };
+
+      if (isEditMode) {
+        await updateTransaction.mutateAsync({
+          id: transaction.id,
+          updates: transactionData
+        });
+      } else {
+        await createTransaction.mutateAsync(transactionData);
+      }
       
       onSuccess();
     } catch (error) {
-      console.error('Error updating transaction:', error);
+      console.error('Error saving transaction:', error);
     } finally {
       setIsLoading(false);
     }
@@ -80,9 +93,9 @@ export const TransactionEditForm: React.FC<TransactionEditFormProps> = ({
             name="order_number"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nomor Pesanan</FormLabel>
+                <FormLabel>Nomor Pesanan *</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input {...field} required />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -108,9 +121,9 @@ export const TransactionEditForm: React.FC<TransactionEditFormProps> = ({
             name="product_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nama Produk</FormLabel>
+                <FormLabel>Nama Produk *</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input {...field} required />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -136,11 +149,11 @@ export const TransactionEditForm: React.FC<TransactionEditFormProps> = ({
             name="platform_id"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Platform</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <FormLabel>Platform *</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} required>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Pilih platform" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -161,11 +174,11 @@ export const TransactionEditForm: React.FC<TransactionEditFormProps> = ({
             name="store_id"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Toko</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <FormLabel>Toko *</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} required>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Pilih toko" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -186,9 +199,15 @@ export const TransactionEditForm: React.FC<TransactionEditFormProps> = ({
             name="quantity"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Quantity</FormLabel>
+                <FormLabel>Quantity *</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} />
+                  <Input 
+                    type="number" 
+                    min="1"
+                    {...field} 
+                    onChange={(e) => field.onChange(parseInt(e.target.value) || 1)} 
+                    required 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -200,9 +219,16 @@ export const TransactionEditForm: React.FC<TransactionEditFormProps> = ({
             name="cost_price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Harga Beli</FormLabel>
+                <FormLabel>Harga Beli *</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
+                  <Input 
+                    type="number" 
+                    min="0"
+                    step="0.01"
+                    {...field} 
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} 
+                    required 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -214,9 +240,16 @@ export const TransactionEditForm: React.FC<TransactionEditFormProps> = ({
             name="selling_price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Harga Jual</FormLabel>
+                <FormLabel>Harga Jual *</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
+                  <Input 
+                    type="number" 
+                    min="0"
+                    step="0.01"
+                    {...field} 
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} 
+                    required 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -228,11 +261,11 @@ export const TransactionEditForm: React.FC<TransactionEditFormProps> = ({
             name="delivery_status"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Status Pengiriman</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <FormLabel>Status Pengiriman *</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} required>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Pilih status" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -281,9 +314,23 @@ export const TransactionEditForm: React.FC<TransactionEditFormProps> = ({
             name="pic_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>PIC</FormLabel>
+                <FormLabel>PIC *</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input {...field} required />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="order_created_at"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tanggal Pesanan *</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} required />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -293,7 +340,7 @@ export const TransactionEditForm: React.FC<TransactionEditFormProps> = ({
 
         <div className="flex justify-end space-x-2">
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+            {isLoading ? 'Menyimpan...' : isEditMode ? 'Simpan Perubahan' : 'Tambah Transaksi'}
           </Button>
         </div>
       </form>
