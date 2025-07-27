@@ -50,3 +50,18 @@ export const formatCurrencyForChart = (value: any): string => {
 export const formatNumberForChart = (value: any): string => {
   return formatCompactNumber(Number(value));
 };
+
+// NEW: Add formatDate function
+export const formatDate = (date: string | Date): string => {
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return new Intl.DateTimeFormat('id-ID', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).format(dateObj);
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return 'Invalid Date';
+  }
+};
