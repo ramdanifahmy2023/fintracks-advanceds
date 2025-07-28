@@ -153,7 +153,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   };
 
   const handleHelpClick = () => {
-    navigate('/user-guide');
+    navigate('/help');
     toast.info('Membuka panduan pengguna');
   };
 
