@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,10 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, BarChart3 } from 'lucide-react';
-import { useDarkMode } from '@/hooks/useDarkMode';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { CreateTestUsersButton } from '@/components/auth/CreateTestUsersButton';
+
 export const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,10 +25,6 @@ export const LoginPage = () => {
     login
   } = useAuth();
   const {
-    isDarkMode,
-    toggleDarkMode
-  } = useDarkMode();
-  const {
     toast
   } = useToast();
 
@@ -35,6 +32,7 @@ export const LoginPage = () => {
   if (user) {
     return <Navigate to="/" replace />;
   }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -109,6 +107,7 @@ export const LoginPage = () => {
     setEmail(testEmail);
     setPassword(testPassword);
   };
+
   return <div className="min-h-screen flex items-center justify-center bg-gradient-hero p-4">
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
       
@@ -162,18 +161,12 @@ export const LoginPage = () => {
                   <Input id="confirmPassword" type="password" placeholder="Konfirmasi password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required={isSignUp} autoComplete="new-password" className="h-11" />
                 </div>}
 
-              <div className="flex items-center justify-between">
-                {!isSignUp && <div className="flex items-center space-x-2">
-                    <Checkbox id="remember" checked={rememberMe} onCheckedChange={checked => setRememberMe(checked as boolean)} />
-                    <Label htmlFor="remember" className="text-sm rounded bg-slate-50">
-                      Ingat saya
-                    </Label>
-                  </div>}
-                
-                <Button type="button" variant="ghost" size="sm" onClick={toggleDarkMode} className="text-muted-foreground hover:text-foreground ml-auto">
-                  {isDarkMode ? '☀️' : '🌙'}
-                </Button>
-              </div>
+              {!isSignUp && <div className="flex items-center space-x-2">
+                  <Checkbox id="remember" checked={rememberMe} onCheckedChange={checked => setRememberMe(checked as boolean)} />
+                  <Label htmlFor="remember" className="text-sm rounded bg-slate-50">
+                    Ingat saya
+                  </Label>
+                </div>}
 
               <Button type="submit" className="w-full h-11 bg-gradient-primary hover:opacity-90 text-white font-medium shadow-lg" disabled={isLoading}>
                 {isLoading ? <>
