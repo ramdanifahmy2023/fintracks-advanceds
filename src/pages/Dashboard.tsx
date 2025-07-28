@@ -136,10 +136,10 @@ const Dashboard = () => {
 
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Ringkasan</TabsTrigger>
+            <TabsTrigger value="overview">Analisis Profit</TabsTrigger>
             <TabsTrigger value="platforms">Platform</TabsTrigger>
             <TabsTrigger value="products">Produk</TabsTrigger>
-            <TabsTrigger value="profit">Analisis Profit</TabsTrigger>
+            <TabsTrigger value="profit">Ringkasan</TabsTrigger>
           </TabsList>
           
           <TabsContent value="overview" className="space-y-6">
