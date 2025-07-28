@@ -27,6 +27,8 @@ import {
   AlertCircle,
   TrendingUp,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -35,6 +37,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const { user, logout } = useAuth();
   const { isDarkMode, toggleDarkMode } = useDarkMode();
+  const navigate = useNavigate();
   const [notificationCount, setNotificationCount] = useState(5);
   const [notifications, setNotifications] = useState([
     {
@@ -78,6 +81,9 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
       read: true,
     },
   ]);
+
+  // Default beautiful avatar image
+  const defaultAvatar = "https://images.unsplash.com/photo-1494790108755-2616b612b47c?w=150&h=150&fit=crop&crop=face&auto=format&q=80";
 
   const getUserInitials = (name: string) => {
     return name
@@ -123,6 +129,32 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const markAllAsRead = () => {
     setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
     setNotificationCount(0);
+  };
+
+  const handleProfileClick = () => {
+    toast.success('Navigasi ke Profile');
+    // You can implement profile navigation here
+    // navigate('/profile');
+  };
+
+  const handleSettingsClick = () => {
+    toast.success('Navigasi ke Settings');
+    navigate('/settings');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success('Berhasil logout');
+      navigate('/login');
+    } catch (error) {
+      toast.error('Gagal logout');
+    }
+  };
+
+  const handleHelpClick = () => {
+    navigate('/user-guide');
+    toast.info('Membuka panduan pengguna');
   };
 
   const unreadNotifications = notifications.filter(n => !n.read);
@@ -174,6 +206,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
           <Button
             variant="ghost"
             size="sm"
+            onClick={handleHelpClick}
             className="hover:bg-accent/50 transition-colors duration-200"
           >
             <HelpCircle className="h-4 w-4" />
@@ -269,7 +302,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                 className="relative h-10 w-10 rounded-full hover:ring-2 hover:ring-primary/20 transition-all duration-200"
               >
                 <Avatar className="h-10 w-10 ring-2 ring-border/50 hover:ring-primary/30 transition-all duration-200">
-                  <AvatarImage src={user?.avatar_url} alt={user?.full_name} />
+                  <AvatarImage 
+                    src={user?.avatar_url || defaultAvatar} 
+                    alt={user?.full_name || 'Profile'} 
+                  />
                   <AvatarFallback className="bg-gradient-primary text-white font-semibold">
                     {user ? getUserInitials(user.full_name) : 'U'}
                   </AvatarFallback>
@@ -277,7 +313,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="w-64 bg-background/95 backdrop-blur-xl border-border/50 shadow-xl"
+              className="w-64 bg-background/95 backdrop-blur-xl border-border/50 shadow-xl z-50"
               align="end"
               forceMount
             >
@@ -285,7 +321,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                 <div className="flex flex-col space-y-2 p-2">
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={user?.avatar_url} alt={user?.full_name} />
+                      <AvatarImage 
+                        src={user?.avatar_url || defaultAvatar} 
+                        alt={user?.full_name || 'Profile'} 
+                      />
                       <AvatarFallback className="bg-gradient-primary text-white">
                         {user ? getUserInitials(user.full_name) : 'U'}
                       </AvatarFallback>
@@ -308,18 +347,24 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="hover:bg-accent/50 transition-colors duration-200">
+              <DropdownMenuItem 
+                onClick={handleProfileClick}
+                className="hover:bg-accent/50 transition-colors duration-200 cursor-pointer"
+              >
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="hover:bg-accent/50 transition-colors duration-200">
+              <DropdownMenuItem 
+                onClick={handleSettingsClick}
+                className="hover:bg-accent/50 transition-colors duration-200 cursor-pointer"
+              >
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={logout}
-                className="text-destructive hover:bg-destructive/10 focus:bg-destructive/10 transition-colors duration-200"
+                onClick={handleLogout}
+                className="text-destructive hover:bg-destructive/10 focus:bg-destructive/10 transition-colors duration-200 cursor-pointer"
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
