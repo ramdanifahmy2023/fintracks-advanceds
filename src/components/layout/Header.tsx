@@ -22,8 +22,10 @@ import {
   Settings,
   LogOut,
   BarChart3,
-  Search,
   HelpCircle,
+  Check,
+  AlertCircle,
+  TrendingUp,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -33,7 +35,49 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const { user, logout } = useAuth();
   const { isDarkMode, toggleDarkMode } = useDarkMode();
-  const [notificationCount] = useState(3); // Placeholder for notifications
+  const [notificationCount, setNotificationCount] = useState(5);
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      title: 'Transaksi Baru',
+      message: '15 transaksi baru dari Shopee',
+      time: '2 menit lalu',
+      type: 'info',
+      read: false,
+    },
+    {
+      id: 2,
+      title: 'Target Tercapai',
+      message: 'Penjualan bulan ini mencapai target',
+      time: '1 jam lalu',
+      type: 'success',
+      read: false,
+    },
+    {
+      id: 3,
+      title: 'Stok Menipis',
+      message: 'Produk SKU-001 stok tersisa 5',
+      time: '3 jam lalu',
+      type: 'warning',
+      read: false,
+    },
+    {
+      id: 4,
+      title: 'Upload Berhasil',
+      message: 'Data CSV berhasil diimpor',
+      time: '1 hari lalu',
+      type: 'success',
+      read: true,
+    },
+    {
+      id: 5,
+      title: 'Laporan Siap',
+      message: 'Laporan analitik bulan ini siap',
+      time: '2 hari lalu',
+      type: 'info',
+      read: true,
+    },
+  ]);
 
   const getUserInitials = (name: string) => {
     return name
@@ -63,6 +107,26 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
     return role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'success':
+        return <Check className="h-4 w-4 text-green-500" />;
+      case 'warning':
+        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+      case 'info':
+        return <TrendingUp className="h-4 w-4 text-blue-500" />;
+      default:
+        return <Bell className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
+    setNotificationCount(0);
+  };
+
+  const unreadNotifications = notifications.filter(n => !n.read);
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center justify-between px-4 md:px-6">
@@ -90,29 +154,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
           </div>
         </div>
 
-        {/* Center Section - Search (hidden on mobile) */}
-        <div className="hidden lg:flex flex-1 max-w-md mx-8">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search transactions, products..."
-              className="w-full pl-10 pr-4 py-2 text-sm bg-accent/50 border border-border/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
-            />
-          </div>
-        </div>
-
         {/* Right Section */}
         <div className="flex items-center space-x-2">
-          {/* Search Button for Mobile */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="lg:hidden hover:bg-accent/50 transition-colors duration-200"
-          >
-            <Search className="h-4 w-4" />
-          </Button>
-
           {/* Dark Mode Toggle */}
           <Button
             variant="ghost"
@@ -136,22 +179,87 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             <HelpCircle className="h-4 w-4" />
           </Button>
 
-          {/* Notifications */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="relative hover:bg-accent/50 transition-colors duration-200"
-          >
-            <Bell className="h-4 w-4" />
-            {notificationCount > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs animate-pulse"
+          {/* Enhanced Notifications */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative hover:bg-accent/50 transition-all duration-200 hover:scale-105"
               >
-                {notificationCount}
-              </Badge>
-            )}
-          </Button>
+                <Bell className="h-4 w-4" />
+                {unreadNotifications.length > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs animate-pulse"
+                  >
+                    {unreadNotifications.length}
+                  </Badge>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              className="w-80 bg-background/95 backdrop-blur-xl border-border/50 shadow-xl max-h-96 overflow-y-auto"
+              align="end"
+            >
+              <DropdownMenuLabel className="font-semibold text-lg p-4 pb-2">
+                <div className="flex items-center justify-between">
+                  <span>Notifikasi</span>
+                  {unreadNotifications.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={markAllAsRead}
+                      className="text-xs hover:bg-accent/50"
+                    >
+                      Tandai semua dibaca
+                    </Button>
+                  )}
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              
+              <div className="max-h-64 overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground">
+                    <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>Tidak ada notifikasi</p>
+                  </div>
+                ) : (
+                  notifications.map((notification) => (
+                    <DropdownMenuItem
+                      key={notification.id}
+                      className={`p-4 cursor-pointer transition-colors duration-200 ${
+                        !notification.read ? 'bg-accent/20 hover:bg-accent/30' : 'hover:bg-accent/10'
+                      }`}
+                    >
+                      <div className="flex items-start space-x-3 w-full">
+                        <div className="flex-shrink-0 mt-1">
+                          {getNotificationIcon(notification.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className={`text-sm font-medium ${!notification.read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                              {notification.title}
+                            </p>
+                            {!notification.read && (
+                              <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 ml-2"></div>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1 truncate">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-muted-foreground/80 mt-1">
+                            {notification.time}
+                          </p>
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* User Menu */}
           <DropdownMenu>
